@@ -1,55 +1,69 @@
-export default function Home() {
+
+import { ArrowRight, Star, TrendingUp, ShieldCheck, Truck } from 'lucide-react';
+import './Home.css';
+import { Link } from 'react-router-dom';
+
+const Home = () => {
   return (
-    <main className="min-h-screen bg-white">
-      {/* Banner Principal (Hero Section) */}
-      <section className="relative w-full h-[70vh] bg-gray-100 flex items-center justify-center overflow-hidden">
-        <div className="text-center z-10">
-          <h2 className="text-4xl md:text-6xl font-light tracking-tighter text-black mb-8">
-            O Futuro da Tecnologia
-          </h2>
-          <button className="px-8 py-3 bg-black text-white text-[11px] uppercase tracking-widest hover:bg-gray-800 transition-colors">
-            Explorar Produtos
-          </button>
-        </div>
-        
-        {/* Placeholder para uma imagem de fundo impactante */}
-        <div className="absolute inset-0 opacity-20 bg-[url('https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=2070')] bg-cover bg-center" />
-      </section>
-
-      {/* Grade de Categorias ou Produtos em Destaque */}
-      <section className="max-w-7xl mx-auto px-10 py-20">
-        <div className="flex justify-between items-end mb-12">
-          <h3 className="text-xl font-medium tracking-tight">Destaques da Semana</h3>
-          <a href="#" className="text-[11px] uppercase tracking-widest border-b border-black pb-1 hover:opacity-50">
-            Ver tudo
-          </a>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Card de Produto Exemplo 1 */}
-          <div className="group cursor-pointer">
-            <div className="aspect-[4/5] bg-gray-50 mb-4 overflow-hidden relative">
-               <div className="absolute inset-0 bg-gray-200 animate-pulse group-hover:hidden" />
+    <div className="home fade-in">
+      <section className="hero">
+        <div className="container hero-content">
+          <div className="hero-text">
+            <h1 className="hero-title">
+              Discover <span className="text-primary">Premium</span> Quality Products
+            </h1>
+            <p className="hero-subtitle">
+              Shop the latest trends with exclusive deals. Fast shipping, guaranteed satisfaction, and top-tier customer service.
+            </p>
+            <div className="hero-actions">
+              <Link to="/products" className="btn-primary">Shop Now</Link>
+              <button className="btn-secondary">View Trendy Products</button>
             </div>
-            <h4 className="text-[13px] font-medium uppercase tracking-wide">Smartphone Note 20 Ultra</h4>
-            <p className="text-gray-500 text-[12px] mt-1">R$ 4.599,00</p>
+            
+            <div className="features">
+              <div className="feature-item">
+                <Truck className="feature-icon" size={20} />
+                <span>Free Shipping</span>
+              </div>
+              <div className="feature-item">
+                <ShieldCheck className="feature-icon" size={20} />
+                <span>Secure Checkout</span>
+              </div>
+            </div>
           </div>
-
-          {/* Card de Produto Exemplo 2 */}
-          <div className="group cursor-pointer">
-            <div className="aspect-[4/5] bg-gray-50 mb-4"></div>
-            <h4 className="text-[13px] font-medium uppercase tracking-wide">Watch 5 Pro </h4>
-            <p className="text-gray-500 text-[12px] mt-1">R$ 2.199,00</p>
-          </div>
-
-          {/* Card de Produto Exemplo 3 */}
-          <div className="group cursor-pointer">
-            <div className="aspect-[4/5] bg-gray-50 mb-4"></div>
-            <h4 className="text-[13px] font-medium uppercase tracking-wide">Fones Noise Cancelling</h4>
-            <p className="text-gray-500 text-[12px] mt-1">R$ 1.299,00</p>
+          
+          <div className="hero-image-wrapper">
+            <div className="hero-image-placeholder">
+              <Star className="hero-icon" size={64} />
+              <p>Premium Collection</p>
+            </div>
+            <div className="floating-badge">
+              <TrendingUp size={16} />
+              <span>Trending Now</span>
+            </div>
           </div>
         </div>
       </section>
-    </main>
+
+      <section className="trending container">
+        <div className="section-header">
+          <h2>Trending Categories</h2>
+          <Link to="/products" className="view-all">View All <ArrowRight size={16} /></Link>
+        </div>
+        <div className="categories-grid">
+          {[1, 2, 3, 4].map(item => (
+            <div key={item} className="category-card card">
+              <div className="category-image"></div>
+              <div className="category-info">
+                <h3>Category {item}</h3>
+                <p>Explore Collection</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
   );
-}
+};
+
+export default Home;
