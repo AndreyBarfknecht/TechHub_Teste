@@ -1,9 +1,11 @@
-
 import { Link } from 'react-router-dom';
-import { ShoppingCart, Menu, Search, User } from 'lucide-react';
+import { ShoppingCart, Menu, Search, User, LogOut } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 import './Navbar.css';
 
 const Navbar = () => {
+  const { user, signOut } = useAuth();
+  
   return (
     <nav className="navbar glass">
       <div className="container nav-content">
@@ -20,9 +22,16 @@ const Navbar = () => {
         </div>
 
         <div className="nav-actions">
-          <button className="icon-btn hidden-mobile" aria-label="Account">
-            <User size={24} />
-          </button>
+          {user ? (
+            <button className="icon-btn hidden-mobile" aria-label="Logout" onClick={signOut} title="Sair">
+              <LogOut size={24} />
+            </button>
+          ) : (
+            <Link to="/login" className="icon-btn hidden-mobile" aria-label="Login" title="Entrar">
+              <User size={24} />
+            </Link>
+          )}
+          
           <button className="icon-btn cart-btn" aria-label="Cart">
             <ShoppingCart size={24} />
             <span className="cart-badge">3</span>
