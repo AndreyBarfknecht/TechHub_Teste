@@ -22,10 +22,17 @@ const Navbar = () => {
         </div>
 
         <div className="nav-actions">
-          {user ? (
-            <button className="icon-btn hidden-mobile" aria-label="Logout" onClick={signOut} title="Sair">
-              <LogOut size={24} />
-            </button>
+{user ? (
+            <>
+              {user.email === 'admin@gmail.com' && (
+                <Link to="/admin" className="icon-btn hidden-mobile" aria-label="Admin" title="Admin">
+                  <User size={24} />
+                </Link>
+              )}
+              <button className="icon-btn hidden-mobile" aria-label="Logout" onClick={signOut} title="Sair">
+                <LogOut size={24} />
+              </button>
+            </>
           ) : (
             <Link to="/login" className="icon-btn hidden-mobile" aria-label="Login" title="Entrar">
               <User size={24} />

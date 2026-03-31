@@ -2,15 +2,19 @@ import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import ProductForm from "../components/admin/ProductForm";
 import ProductList from "../components/admin/ProductList";
+import type { Product } from "../types/product";
+import type { Session } from '@supabase/supabase-js';
 import { LogOut } from "lucide-react";
 
 export default function AdminPage() {
-  const [session, setSession] = useState<any>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [message, setMessage] = useState({ type: '', text: '' } as { type: 'success' | 'error'; text: string });
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -43,6 +47,32 @@ export default function AdminPage() {
 
   const handleProductAdded = () => {
     setRefreshTrigger(prev => prev + 1);
+    setEditingProduct(null);
+    setMessage({ type: '', text: '' });
+  };
+
+  const handleEditStart = (product: Product) => {
+    setEditingProduct(product);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingProduct(null);
+  };
+
+  const handleProductUpdated = () => {
+    setRefreshTrigger(prev => prev + 1);
+    setEditingProduct(null);
+    setMessage({ type: 'success', text: 'Produto atualizado com sucesso.' });
+  };
+
+  const handleProductDeleted = () => {
+    setRefreshTrigger(prev => prev + 1);
+    setMessage({ type: 'success', text: 'Produto removido com sucesso.' });
+  };
+
+  const handleMessageClose = () => {
+    setMessage({ type: '', text: '' });
   };
 
   if (loading) {
@@ -90,7 +120,7 @@ export default function AdminPage() {
       <div style={{ maxWidth: '760px', margin: '0 auto' }}>
         <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
           <div>
-            <h1 style={{ fontSize: '24px', margin: 0 }}>Admin — Cadastro de Produtos</h1>
+            <h1 style={{ fontSize: '24px', margin: 0 }}>{editingProduct ? `Editando: ${editingProduct.name}` : 'Admin — Cadastro de Produtos'}</h1>
             <p style={{ color: '#666', margin: '4px 0 0 0' }}>Produtos cadastrados aqui aparecem automaticamente na loja</p>
           </div>
           <button 
@@ -102,11 +132,27 @@ export default function AdminPage() {
           </button>
         </header>
 
-        <ProductForm onProductAdded={handleProductAdded} />
+        {message.type && (
+          <div style={{ backgroundColor: message.type === 'success' ? '#d1fae5' : '#fee2e2', color: message.type === 'success' ? '#065f46' : '#991b1b', padding: '12px', borderRadius: '8px', marginBottom: '24px' }}>
+            {message.text}
+            <button onClick={handleMessageClose} style={{ float: 'right', background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer' }}>×</button>
+          </div>
+        )}
+
+        <ProductForm 
+          onProductAdded={handleProductAdded}
+          editingProduct={editingProduct}
+          onCancelEdit={handleCancelEdit}
+          onProductUpdated={handleProductUpdated}
+        />
         
         <div style={{ marginTop: '48px' }}>
           <h2 style={{ fontSize: '20px', marginBottom: '24px' }}>Produtos na Loja</h2>
-          <ProductList refreshTrigger={refreshTrigger} />
+          <ProductList 
+            refreshTrigger={refreshTrigger}
+            onEdit={handleEditStart}
+            onDelete={handleProductDeleted}
+          />
         </div>
       </div>
     </div>

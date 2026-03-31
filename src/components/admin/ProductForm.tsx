@@ -1,11 +1,24 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
+import type { Product } from './types';
 
-export default function ProductForm({ onProductAdded }: { onProductAdded: () => void }) {
-  const [categories, setCategories] = useState<any[]>([]);
+interface ProductFormProps {
+  onProductAdded: () => void;
+  editingProduct: Product | null;
+  onCancelEdit: () => void;
+  onProductUpdated: () => void;
+}
+
+export default function ProductForm({ onProductAdded, editingProduct, onCancelEdit, onProductUpdated }: ProductFormProps) {
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
+
+  interface Category {
+    id: string;
+    name: string;
+  }
 
   // Form states
   const [name, setName] = useState('');
@@ -15,6 +28,26 @@ export default function ProductForm({ onProductAdded }: { onProductAdded: () => 
   const [categoryId, setCategoryId] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [isFeatured, setIsFeatured] = useState(false);
+
+  useEffect(() => {
+    if (editingProduct) {
+      setName(editingProduct.name);
+      setDescription(editingProduct.description || '');
+      setPrice(editingProduct.price.toString());
+      setStock(editingProduct.stock_quantity.toString());
+      setCategoryId(editingProduct.category_id);
+      setIsFeatured(editingProduct.is_featured);
+      setImageFile(null);
+    } else {
+      setName('');
+      setDescription('');
+      setPrice('');
+      setStock('0');
+      setCategoryId('');
+      setIsFeatured(false);
+      setImageFile(null);
+    }
+  }, [editingProduct]);
 
   useEffect(() => {
     supabase.from('categories').select('*').then(({ data }) => {
@@ -32,9 +65,18 @@ export default function ProductForm({ onProductAdded }: { onProductAdded: () => 
     setLoading(true);
 
     try {
-      let image_url = null;
+      let image_url = editingProduct?.image_url || null;
 
       if (imageFile) {
+        // Delete old image if editing
+        if (editingProduct?.image_url) {
+          const oldFilename = editingProduct.image_url.split('/').pop();
+          if (oldFilename) {
+            const { error: deleteError } = await supabase.storage.from('product-images').remove([oldFilename]);
+            if (deleteError) console.error('Old image delete error:', deleteError);
+          }
+        }
+
         const fileExt = imageFile.name.split('.').pop();
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
         
@@ -51,10 +93,7 @@ export default function ProductForm({ onProductAdded }: { onProductAdded: () => 
         image_url = publicUrlData.publicUrl;
       }
 
-      const newId = crypto.randomUUID();
-
-      const { error: insertError } = await supabase.from('products').insert({
-        id: newId,
+      const productData = {
         name,
         description,
         price: parseFloat(price),
@@ -62,49 +101,70 @@ export default function ProductForm({ onProductAdded }: { onProductAdded: () => 
         category_id: categoryId,
         image_url,
         is_featured: isFeatured,
-        created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
-      });
+      };
 
-      if (insertError) throw new Error(`Erro ao salvar produto: ${insertError.message}`);
+      if (editingProduct) {
+        // Update
+        const { error: updateError } = await supabase
+          .from('products')
+          .update(productData)
+          .eq('id', editingProduct.id);
 
-      setSuccess('Produto cadastrado com sucesso!');
+        if (updateError) throw new Error(`Erro ao atualizar produto: ${updateError.message}`);
+
+        setSuccess('Produto atualizado com sucesso!');
+        onProductUpdated();
+      } else {
+        // Create
+        const newId = crypto.randomUUID();
+
+        const { error: insertError } = await supabase.from('products').insert({
+          ...productData,
+          id: newId,
+          created_at: new Date().toISOString()
+        });
+
+        if (insertError) throw new Error(`Erro ao salvar produto: ${insertError.message}`);
+
+        setSuccess('Produto cadastrado com sucesso!');
+        onProductAdded();
+      }
       
-      setName('');
-      setDescription('');
-      setPrice('');
-      setStock('0');
-      setImageFile(null);
-      setIsFeatured(false);
+      // Reset form
       const fileInput = document.getElementById('imageFile') as HTMLInputElement;
       if (fileInput) fileInput.value = '';
-
-      onProductAdded();
-    } catch (err: any) {
-      setError(err.message || 'Erro inesperado.');
+      setImageFile(null);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Erro inesperado.';
+      setError(message);
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <div className="card" style={{ padding: '32px' }}>
-      {success && (
-        <div style={{ backgroundColor: '#d1fae5', color: '#065f46', padding: '12px', borderRadius: '8px', marginBottom: '24px' }}>
-          {success}
-        </div>
-      )}
-      {error && (
-        <div style={{ backgroundColor: '#fee2e2', color: '#991b1b', padding: '12px', borderRadius: '8px', marginBottom: '24px' }}>
-          {error}
-        </div>
-      )}
+  const handleCancel = () => {
+    onCancelEdit();
+  };
 
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        <div>
-          <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 'bold' }}>Nome do Produto</label>
-          <input required type="text" value={name} onChange={e => setName(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ccc' }} />
-        </div>
+  return (
+        <div className="card" style={{ padding: '32px' }}>
+          {success && (
+            <div style={{ backgroundColor: '#d1fae5', color: '#065f46', padding: '12px', borderRadius: '8px', marginBottom: '24px' }}>
+              {success}
+            </div>
+          )}
+          {error && (
+            <div style={{ backgroundColor: '#fee2e2', color: '#991b1b', padding: '12px', borderRadius: '8px', marginBottom: '24px' }}>
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 'bold' }}>Nome do Produto</label>
+              <input required type="text" value={name} onChange={e => setName(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ccc' }} />
+            </div>
 
         <div>
           <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 'bold' }}>Descrição</label>
@@ -141,9 +201,16 @@ export default function ProductForm({ onProductAdded }: { onProductAdded: () => 
           <label htmlFor="isFeatured" style={{ fontSize: '15px', fontWeight: 'bold', cursor: 'pointer' }}>Produto em Destaque</label>
         </div>
 
-        <button type="submit" disabled={loading} className="btn-primary" style={{ marginTop: '12px', opacity: loading ? 0.7 : 1 }}>
-          {loading ? 'Salvando...' : 'Cadastrar Produto'}
-        </button>
+        <div style={{ display: 'flex', gap: '12px', flexDirection: 'column' }}>
+          <button type="submit" disabled={loading} className="btn-primary" style={{ opacity: loading ? 0.7 : 1 }}>
+            {loading ? 'Salvando...' : editingProduct ? 'Salvar Alterações' : 'Cadastrar Produto'}
+          </button>
+          {editingProduct && (
+            <button type="button" onClick={handleCancel} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #6b7280', background: 'white', cursor: 'pointer' }}>
+              Cancelar Edição
+            </button>
+          )}
+        </div>
       </form>
     </div>
   );
