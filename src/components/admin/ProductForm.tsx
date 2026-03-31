@@ -16,7 +16,7 @@ export default function ProductForm({ onProductAdded, editingProduct, onCancelEd
   const [error, setError] = useState('');
 
   interface Category {
-    id: string;
+    id: string; //aaa
     name: string;
   }
 
