@@ -25,7 +25,7 @@ const Home = () => {
     
     fetchTrending();
   }, []);
-//aaaaaaaaaaaaaaaaaaa
+//aaaaaaaaaaaaaaaaaaa aaaaaaaaaaaa
   return (
     <div className="home fade-in">
       <section className="hero">
