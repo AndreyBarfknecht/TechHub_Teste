@@ -14,7 +14,7 @@ export default function AdminPage() {
   const [error, setError] = useState("");
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [message, setMessage] = useState({ type: '', text: '' } as { type: 'success' | 'error'; text: string });
+  const [message, setMessage] = useState<{ type: '' | 'success' | 'error'; text: string }>({ type: '', text: '' });
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -69,6 +69,10 @@ export default function AdminPage() {
   const handleProductDeleted = () => {
     setRefreshTrigger(prev => prev + 1);
     setMessage({ type: 'success', text: 'Produto removido com sucesso.' });
+  };
+
+  const handleDeleteError = (error: string) => {
+    setMessage({ type: 'error', text: error });
   };
 
   const handleMessageClose = () => {
@@ -152,6 +156,7 @@ export default function AdminPage() {
             refreshTrigger={refreshTrigger}
             onEdit={handleEditStart}
             onDelete={handleProductDeleted}
+            onDeleteError={handleDeleteError}
           />
         </div>
       </div>

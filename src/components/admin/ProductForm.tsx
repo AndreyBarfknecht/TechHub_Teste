@@ -193,7 +193,22 @@ export default function ProductForm({ onProductAdded, editingProduct, onCancelEd
 
         <div>
           <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 'bold' }}>Imagem do Produto</label>
-          <input required id="imageFile" type="file" accept="image/jpeg, image/png, image/webp" onChange={e => setImageFile(e.target.files?.[0] || null)} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ccc' }} />
+          <input id="imageFile" type="file" accept="image/jpeg, image/png, image/webp" onChange={e => setImageFile(e.target.files?.[0] || null)} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ccc' }} />
+          {editingProduct?.image_url && !imageFile && (
+            <div style={{ marginTop: '12px', padding: '12px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <img 
+                  src={editingProduct.image_url} 
+                  alt="Imagem atual" 
+                  style={{ width: '60px', height: '60px', borderRadius: '8px', objectFit: 'cover', border: '1px solid #e2e8f0' }} 
+                />
+                <div>
+                  <p style={{ margin: '0 0 4px 0', fontSize: '14px', fontWeight: '500', color: '#475569' }}>Imagem atual</p>
+                  <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>Selecione nova apenas se quiser substituir</p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

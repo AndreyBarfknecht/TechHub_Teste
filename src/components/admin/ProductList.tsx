@@ -7,9 +7,10 @@ interface ProductListProps {
   refreshTrigger: number;
   onEdit: (product: Product) => void;
   onDelete: () => void;
+  onDeleteError?: (error: string) => void;
 }
 
-export default function ProductList({ refreshTrigger, onEdit, onDelete }: ProductListProps) {
+export default function ProductList({ refreshTrigger, onEdit, onDelete, onDeleteError }: ProductListProps) {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -47,8 +48,8 @@ export default function ProductList({ refreshTrigger, onEdit, onDelete }: Produc
 
       onDelete();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Erro desconhecido';
-      alert(`Erro ao remover produto: ${message}`);
+      console.error('Delete error:', err);
+      onDeleteError?.(err instanceof Error ? err.message : 'Erro ao remover produto');
     }
   };
 
