@@ -14,7 +14,7 @@ export default function AdminPage() {
   const [error, setError] = useState("");
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [message, setMessage] = useState({ type: '', text: '' } as { type: 'success' | 'error'; text: string });
+  const [message, setMessage] = useState<{ type: 'success' | 'error' | ''; text: string }>({ type: '', text: '' });
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
