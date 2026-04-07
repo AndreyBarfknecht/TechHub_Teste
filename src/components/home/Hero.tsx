@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, ShieldCheck, Truck } from 'lucide-react';
+import { ShieldCheck, Truck } from 'lucide-react';
 import { useTrendingProducts } from '../../hooks/useTrendingProducts';
 import './Hero.css';
 
