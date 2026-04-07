@@ -1,10 +1,12 @@
 import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
-import Navbar from "./components/layout/Navbar.tsx";
-import Home from "./pages/Home.tsx";
-import Products from "./pages/Products.tsx";
-import Login from "./pages/Login.tsx";
-import AdminPage from "./pages/AdminPage.tsx";
-import { AuthProvider } from "./context/AuthContext.tsx";
+import Navbar from "./components/layout/Navbar";
+import AnnouncementBar from "./components/layout/AnnouncementBar";
+import Footer from "./components/layout/Footer";
+import Home from "./pages/Home";
+import Products from "./pages/Products";
+import Login from "./pages/Login";
+import AdminPage from "./pages/AdminPage";
+import { AuthProvider } from "./context/AuthContext";
 
 function AppContent() {
   const location = useLocation();
@@ -12,6 +14,7 @@ function AppContent() {
 
   return (
     <div className="App fade-in">
+      {!isAdminRoute && <AnnouncementBar />}
       {!isAdminRoute && <Navbar />}
       <main>
         <Routes>
@@ -21,6 +24,7 @@ function AppContent() {
           <Route path="/admin" element={<AdminPage />} />
         </Routes>
       </main>
+      {!isAdminRoute && <Footer />}
     </div>
   );
 }
