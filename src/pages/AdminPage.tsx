@@ -69,6 +69,7 @@ export default function AdminPage() {
   const handleProductDeleted = () => {
     setRefreshTrigger(prev => prev + 1);
     setMessage({ type: 'success', text: 'Produto removido com sucesso.' });
+    alert('Produto removido com sucesso!');
   };
 
   const handleMessageClose = () => {
