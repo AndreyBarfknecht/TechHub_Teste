@@ -193,7 +193,7 @@ export default function ProductForm({ onProductAdded, editingProduct, onCancelEd
 
         <div>
           <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 'bold' }}>Imagem do Produto</label>
-          <input required id="imageFile" type="file" accept="image/jpeg, image/png, image/webp" onChange={e => setImageFile(e.target.files?.[0] || null)} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ccc' }} />
+          <input required={!editingProduct} id="imageFile" type="file" accept="image/jpeg, image/png, image/webp" onChange={e => setImageFile(e.target.files?.[0] || null)} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ccc' }} />
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
