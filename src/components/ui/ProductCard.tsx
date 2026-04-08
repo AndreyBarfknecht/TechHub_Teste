@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import type { Product } from '../../types/product';
 import { ShoppingCart, Check } from 'lucide-react';
 
@@ -10,7 +11,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [isAdded, setIsAdded] = useState(false);
 
-  const handleAddToCart = () => {
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     setIsAdding(true);
     // Simulating API call
     setTimeout(() => {
@@ -21,7 +24,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   };
 
   return (
-    <div className="product-card card">
+    <Link to={`/product/${product.id}`} className="product-card card" style={{ display: 'block', textDecoration: 'none', color: 'inherit' }}>
       <div
         className="product-image"
         style={{
@@ -50,7 +53,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           </button>
         </div>
       </div>
-    </div>
+    </Link>
   );
 };
 

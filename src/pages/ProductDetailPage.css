@@ -1,0 +1,475 @@
+/* Product Detail Page Container */
+.product-detail-page {
+  padding-top: 2rem;
+  padding-bottom: 4rem;
+}
+
+/* Breadcrumb */
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin-bottom: 2rem;
+}
+
+.breadcrumb a {
+  color: var(--text-muted);
+  transition: color var(--transition);
+}
+
+.breadcrumb a:hover {
+  color: var(--text-main);
+}
+
+.breadcrumb-active {
+  font-weight: 500;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+/* Product Detail Card */
+.product-detail-card {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Photo Gallery Left Side */
+.product-gallery-section {
+  padding: 2rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.product-image-main {
+  width: 100%;
+  aspect-ratio: 1/1;
+  border-radius: var(--radius-md);
+  background: var(--bg-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+  margin-bottom: 1rem;
+  border: 1px solid var(--border);
+  cursor: crosshair;
+}
+
+.product-image-main img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transition: opacity 0.2s;
+}
+
+.product-zoom-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  background-color: white;
+}
+
+.badge-featured {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  background: #10b981;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.25rem 0.75rem;
+  border-radius: 100px;
+  z-index: 10;
+  box-shadow: var(--shadow-sm);
+}
+
+/* Thumbnails */
+.product-thumbnails {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+}
+
+.thumbnail-btn {
+  width: 80px;
+  height: 80px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  border: 2px solid transparent;
+  padding: 0.25rem;
+  background: white;
+  cursor: pointer;
+  transition: all var(--transition);
+  opacity: 0.7;
+}
+
+.thumbnail-btn:hover {
+  opacity: 1;
+}
+
+.thumbnail-btn.active {
+  border-color: var(--primary);
+  opacity: 1;
+  box-shadow: var(--shadow-sm);
+}
+
+.thumbnail-btn img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Navigation Mobile */
+.mobile-nav-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.8);
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  z-index: 10;
+  color: var(--text-main);
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+
+.product-image-main:hover .mobile-nav-btn {
+  opacity: 1;
+}
+
+.mobile-nav-btn.prev {
+  left: 1rem;
+}
+
+.mobile-nav-btn.next {
+  right: 1rem;
+}
+
+/* Right Side - Info Box */
+.product-info-section {
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.product-rating {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.stars {
+  display: flex;
+  color: #fbbf24;
+}
+
+.rating-score {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-main);
+}
+
+.rating-text {
+  font-size: 0.9rem;
+  color: var(--primary);
+  cursor: pointer;
+}
+
+.rating-text:hover {
+  text-decoration: underline;
+}
+
+.product-title {
+  font-size: 2rem;
+  margin-bottom: 1.5rem;
+  color: var(--text-main);
+}
+
+.product-pricing {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.price-main {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--text-main);
+  line-height: 1;
+  margin-bottom: 0.5rem;
+}
+
+.price-installment {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.stock-warning {
+  font-size: 0.9rem;
+  color: #f59e0b;
+  font-weight: 600;
+  margin-top: 0.5rem;
+}
+
+.stock-out {
+  font-size: 0.9rem;
+  color: #ef4444;
+  font-weight: 600;
+  margin-top: 0.5rem;
+}
+
+/* Actions Section */
+.product-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.quantity-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.quantity-selector span {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.qty-controls {
+  display: flex;
+  align-items: center;
+  width: fit-content;
+  background: var(--bg-color);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  height: 48px;
+}
+
+.qty-btn {
+  width: 40px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+.qty-btn:not(:disabled):hover {
+  color: var(--primary);
+}
+
+.qty-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.qty-value {
+  width: 40px;
+  text-align: center;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+/* Purchase Buttons */
+.purchase-buttons {
+  display: flex;
+  gap: 1rem;
+  flex-direction: column;
+}
+
+.btn-add, .btn-buy {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  height: 54px;
+  font-weight: 700;
+  font-size: 1rem;
+  border-radius: var(--radius-md);
+  transition: all var(--transition);
+}
+
+.btn-add {
+  background: white;
+  color: var(--primary);
+  border: 2px solid var(--primary);
+}
+
+.btn-add:not(:disabled):hover {
+  background: var(--primary-light);
+}
+
+.btn-buy {
+  background: var(--primary);
+  color: white;
+  box-shadow: 0 4px 15px rgba(100, 120, 255, 0.3);
+}
+
+.btn-buy:not(:disabled):hover {
+  background: var(--primary-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(100, 120, 255, 0.4);
+}
+
+.btn-add:disabled, .btn-buy:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Benefits */
+.product-benefits {
+  list-style: none;
+  padding-bottom: 2rem;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.benefit-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.benefit-item strong {
+  color: var(--text-main);
+}
+
+.benefit-icon {
+  color: #10b981;
+  flex-shrink: 0;
+}
+
+/* Details Section */
+.product-details h2 {
+  font-size: 1.25rem;
+  color: var(--text-main);
+  margin-bottom: 1rem;
+}
+
+.product-desc-text {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  line-height: 1.7;
+  white-space: pre-wrap;
+  margin-bottom: 2rem;
+}
+
+.product-specs {
+  background: var(--bg-color);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.spec-row {
+  display: flex;
+  padding: 1rem 1.5rem;
+  font-size: 0.9rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.spec-row:last-child {
+  border-bottom: none;
+}
+
+.spec-label {
+  width: 35%;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.spec-value {
+  width: 65%;
+  color: var(--text-muted);
+}
+
+/* Empty/Loading States */
+.page-loading, .page-error {
+  min-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 1rem;
+}
+
+.page-error h1 {
+  font-size: 2rem;
+  color: var(--text-main);
+}
+
+.page-error p {
+  color: var(--text-muted);
+}
+
+.icon-spin {
+  animation: spin 1s linear infinite;
+  color: var(--primary);
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@media (min-width: 992px) {
+  .product-detail-card {
+    flex-direction: row;
+  }
+  
+  .product-gallery-section {
+    width: 50%;
+    border-bottom: none;
+    border-right: 1px solid var(--border);
+    padding: 3rem;
+  }
+  
+  .product-info-section {
+    width: 50%;
+    padding: 3rem;
+  }
+
+  .purchase-buttons {
+    flex-direction: row;
+  }
+
+  .btn-add, .btn-buy {
+    flex: 1;
+  }
+
+  .mobile-nav-btn {
+    display: none;
+  }
+}

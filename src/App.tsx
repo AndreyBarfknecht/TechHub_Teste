@@ -6,6 +6,7 @@ import Home from "./pages/Home";
 import Products from "./pages/Products";
 import Login from "./pages/Login";
 import AdminPage from "./pages/AdminPage";
+import ProductDetailPage from "./pages/ProductDetailPage";
 import { AuthProvider } from "./context/AuthContext";
 
 function AppContent() {
@@ -20,6 +21,7 @@ function AppContent() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/products" element={<Products />} />
+          <Route path="/product/:id" element={<ProductDetailPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/admin" element={<AdminPage />} />
         </Routes>
