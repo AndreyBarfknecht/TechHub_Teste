@@ -7,6 +7,7 @@ import Products from "./pages/Products";
 import Login from "./pages/Login";
 import AdminPage from "./pages/AdminPage";
 import ProductDetailPage from "./pages/ProductDetailPage";
+import ScrollToTop from "./components/layout/ScrollToTop";
 import { AuthProvider } from "./context/AuthContext";
 
 function AppContent() {
@@ -15,6 +16,7 @@ function AppContent() {
 
   return (
     <div className="App fade-in">
+      <ScrollToTop />
       {!isAdminRoute && <AnnouncementBar />}
       {!isAdminRoute && <Navbar />}
       <main>
