@@ -29,7 +29,8 @@ CREATE TABLE public.products (
     description TEXT,
     price DECIMAL(10, 2) NOT NULL,
     stock_quantity INTEGER DEFAULT 0 NOT NULL,
-    image_url TEXT,
+    image_urls TEXT[] DEFAULT '{}'::TEXT[] NOT NULL,
+    specifications JSONB DEFAULT '{}'::JSONB,
     is_featured BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW())
@@ -91,6 +92,21 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+-- 6. Tabela de Avaliações (Reviews)
+CREATE TABLE public.reviews (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    product_id UUID REFERENCES public.products(id) ON DELETE CASCADE NOT NULL,
+    user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+    rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+    comment TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+    UNIQUE(product_id, user_id) -- Garante que um usuário só avalie um produto uma vez
+);
+
+-- RLS para Reviews
+ALTER TABLE public.reviews ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Reviews are viewable by everyone" ON public.reviews FOR SELECT USING (true);
+CREATE POLICY "Authenticated users can insert reviews" ON public.reviews FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own reviews" ON public.reviews FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Users can delete own reviews" ON public.reviews FOR DELETE USING (auth.uid() = user_id);

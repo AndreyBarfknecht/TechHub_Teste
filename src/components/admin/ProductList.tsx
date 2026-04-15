@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom'; // Importado para navegação
 import { supabase } from '../../lib/supabase';
 import type { Product } from './types';
-import { Edit, Trash2 } from 'lucide-react';
+import { Edit2, Trash2, PackageSearch, Eye } from 'lucide-react';
 
 interface ProductListProps {
   refreshTrigger: number;
@@ -25,19 +26,18 @@ export default function ProductList({ refreshTrigger, onEdit, onDelete }: Produc
   }, [refreshTrigger]);
 
   const handleDelete = async (product: Product) => {
-    if (!confirm(`Tem certeza que deseja remover "${product.name}"?`)) return;
+    if (!confirm(`Atenção: Tem a certeza que deseja eliminar "${product.name}"?\nEsta ação não pode ser desfeita.`)) return;
 
     try {
-      // Delete from storage if image exists
-      if (product.image_url) {
-        const filename = product.image_url.split('/').pop();
-        if (filename) {
-          const { error: storageError } = await supabase.storage.from('product-images').remove([filename]);
-          if (storageError) console.error('Storage delete error:', storageError);
+      if (product.image_urls && product.image_urls.length > 0) {
+        for (const url of product.image_urls) {
+          const filename = url.split('/').pop();
+          if (filename) {
+            await supabase.storage.from('product-images').remove([filename]);
+          }
         }
       }
 
-      // Delete from database
       const { error } = await supabase
         .from('products')
         .delete()
@@ -52,86 +52,76 @@ export default function ProductList({ refreshTrigger, onEdit, onDelete }: Produc
     }
   };
 
-  if (loading) return <div>Carregando produtos...</div>;
+  if (loading) return <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>A carregar catálogo...</div>;
 
   if (products.length === 0) {
     return (
-      <div className="card" style={{ padding: '32px', textAlign: 'center', color: '#666' }}>
-        Nenhum produto cadastrado ainda.
+      <div className="admin-section" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
+        <PackageSearch size={48} color="var(--border)" style={{ margin: '0 auto 1rem' }} />
+        <h3 style={{ color: 'var(--text-main)', marginBottom: '0.5rem' }}>Catálogo Vazio</h3>
+        <p style={{ color: 'var(--text-muted)' }}>Ainda não registou nenhum produto na sua loja.</p>
       </div>
     );
   }
 
+  const getStockStatus = (qty: number) => {
+    if (qty === 0) return <span className="item-stock stock-out">Esgotado</span>;
+    if (qty < 5) return <span className="item-stock stock-low">Baixo: {qty} un</span>;
+    return <span className="item-stock stock-good">Stock: {qty} un</span>;
+  };
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+    <div className="product-list-container">
       {products.map(product => (
-        <div key={product.id} className="card" style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '16px', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1 }}>
-            {product.image_url ? (
-              <img src={product.image_url} alt={product.name} style={{ width: '40px', height: '40px', borderRadius: '8px', objectFit: 'cover' }} />
+        <div key={product.id} className="product-list-item">
+          
+          <div className="item-info-group">
+            {product.image_urls && product.image_urls.length > 0 ? (
+              <img src={product.image_urls[0]} alt={product.name} className="item-thumb" />
             ) : (
-              <div style={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <span style={{ fontSize: '10px', color: '#94a3b8' }}>Sem img</span>
-              </div>
+              <div className="item-thumb-empty">S/ Img</div>
             )}
             
-            <div>
-              <h3 style={{ fontSize: '16px', margin: 0 }}>{product.name}</h3>
-            <p style={{ fontSize: '14px', color: '#666', margin: 0 }}>{product.category?.name || 'Sem categoria'}</p>
-          </div>
+            <div className="item-details">
+              <h3>{product.name}</h3>
+              <span className="item-category">{product.category?.name || 'Sem categoria'}</span>
+            </div>
           </div>
           
-          <div style={{ textAlign: 'right', minWidth: '140px' }}>
-            <div style={{ fontWeight: 'bold', fontSize: '16px' }}>
+          <div className="item-stats">
+            <div className="item-price">
               {product.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
             </div>
-            <div style={{ fontSize: '12px', color: product.stock_quantity > 0 ? '#059669' : '#dc2626' }}>
-              Estoque: {product.stock_quantity}
-            </div>
+            {getStockStatus(product.stock_quantity)}
           </div>
 
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div className="item-actions">
+            {/* NOVO BOTÃO: VER PRODUTO NA LOJA */}
+            <Link 
+              to={`/product/${product.id}`} 
+              className="btn-icon" 
+              style={{ color: '#059669', border: '1px solid #d1fae5' }}
+              title="Ver na Loja"
+            >
+              <Eye size={16} />
+            </Link>
+
             <button
               onClick={() => onEdit(product)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                padding: '6px 12px',
-                borderRadius: '6px',
-                border: '1px solid #4F46E5',
-                background: 'transparent',
-                color: '#4F46E5',
-                fontSize: '13px',
-                cursor: 'pointer',
-                fontWeight: '500'
-              }}
-              title="Editar"
+              className="btn-icon btn-edit"
+              title="Editar Produto"
             >
-              <Edit size={14} />
-              Editar
+              <Edit2 size={16} />
             </button>
             <button
               onClick={() => handleDelete(product)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                padding: '6px 12px',
-                borderRadius: '6px',
-                border: '1px solid #DC2626',
-                background: 'transparent',
-                color: '#DC2626',
-                fontSize: '13px',
-                cursor: 'pointer',
-                fontWeight: '500'
-              }}
-              title="Remover"
+              className="btn-icon btn-delete"
+              title="Eliminar Produto"
             >
-              <Trash2 size={14} />
-              Remover
+              <Trash2 size={16} />
             </button>
           </div>
+          
         </div>
       ))}
     </div>

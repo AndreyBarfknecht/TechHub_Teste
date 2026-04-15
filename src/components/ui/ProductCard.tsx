@@ -23,16 +23,18 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     }, 800);
   };
 
+  const coverImage = product.image_urls && product.image_urls.length > 0 ? product.image_urls[0] : null;
+
   return (
     <Link to={`/product/${product.id}`} className="product-card card" style={{ display: 'block', textDecoration: 'none', color: 'inherit' }}>
       <div
         className="product-image"
         style={{
-          backgroundImage: product.image_url ? `url(${product.image_url})` : 'none',
-          backgroundColor: product.image_url ? 'transparent' : '#f5f5f5',
+          backgroundImage: coverImage ? `url(${coverImage})` : 'none',
+          backgroundColor: coverImage ? 'transparent' : '#f5f5f5',
         }}
       >
-        {!product.image_url && <div className="image-placeholder" />}
+        {!coverImage && <div className="image-placeholder" />}
       </div>
 
       <div className="product-info">

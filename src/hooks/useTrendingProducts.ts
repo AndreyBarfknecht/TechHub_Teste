@@ -19,7 +19,7 @@ export const useTrendingProducts = () => {
 
         if (supabaseError) throw supabaseError;
         if (data) setTrendingProducts(data);
-      } catch (err) {
+      } catch (err: unknown) {
         setError(err instanceof Error ? err : new Error('Failed to fetch trending products'));
       } finally {
         setLoading(false);

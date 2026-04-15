@@ -1,33 +1,53 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { 
-  Star, 
   ChevronRight, 
-  ChevronLeft, 
-  Minus, 
-  Plus, 
-  ShoppingCart, 
-  CreditCard, 
-  ShieldCheck, 
+  Star,
   Truck,
   RotateCcw,
-  Loader2,
-  AlertCircle
+  ShieldCheck,
+  AlertCircle,
+  CheckCircle
 } from "lucide-react";
 import "./ProductDetailPage.css";
+import "../components/product/ProductSpecs.css";
 import { supabase } from "../lib/supabase";
 import type { Product } from "../types/product";
+import { useRelatedProducts } from "../hooks/useRelatedProducts";
+import { useProductReviews } from "../hooks/useProductReviews";
+import ProductCard from "../components/ui/ProductCard";
+
+// Refactored Components
+import { ProductGallery } from "../components/product/ProductGallery";
+import { ProductPurchaseActions } from "../components/product/ProductPurchaseActions";
+import { FreightSimulator } from "../components/product/FreightSimulator";
+import { ProductReviews } from "../components/product/ProductReviews";
+
+const ProductDetailSkeleton = () => (
+  <div className="product-detail-page fade-in container">
+    <div className="product-detail-card">
+      <div className="product-gallery-section skeleton-pulse-bg" style={{ height: '500px' }} />
+      <div className="product-info-section">
+        <div className="skeleton-line" style={{ width: '80%', height: '36px', marginBottom: '1.5rem' }} />
+        <div className="skeleton-line" style={{ width: '40%', height: '40px', marginBottom: '1.5rem' }} />
+        <div className="skeleton-line" style={{ width: '60%', height: '20px', marginBottom: '2rem' }} />
+        <div className="skeleton-line" style={{ width: '100%', height: '54px', marginBottom: '1rem' }} />
+        <div className="skeleton-line" style={{ width: '100%', height: '54px', marginBottom: '2rem' }} />
+        <div className="skeleton-line" style={{ width: '100%', height: '150px' }} />
+      </div>
+    </div>
+  </div>
+);
 
 export default function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showToast, setShowToast] = useState(false);
 
-  const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [isHoveringImage, setIsHoveringImage] = useState(false);
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const [quantity, setQuantity] = useState(1);
+  const { reviews, averageRating } = useProductReviews(id);
+  const { relatedProducts, loading: relatedLoading } = useRelatedProducts(product?.category_id, product?.id);
 
   useEffect(() => {
     async function fetchProduct() {
@@ -42,7 +62,7 @@ export default function ProductDetailPage() {
 
         if (supabaseError) throw supabaseError;
         setProduct(data as Product);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Error fetching product:", err);
         setError("Produto não encontrado ou ocorreu um erro.");
       } finally {
@@ -52,13 +72,16 @@ export default function ProductDetailPage() {
     fetchProduct();
   }, [id]);
 
-  if (loading) {
-    return (
-      <div className="page-loading fade-in">
-        <Loader2 className="w-10 h-10 icon-spin" />
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (product) {
+      document.title = `${product.name} | E-commerce`;
+    }
+    return () => {
+      document.title = 'E-commerce';
+    };
+  }, [product]);
+
+  if (loading) return <ProductDetailSkeleton />;
 
   if (error || !product) {
     return (
@@ -77,22 +100,12 @@ export default function ProductDetailPage() {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
   };
 
-  const placeholderImg = "https://via.placeholder.com/1000?text=Sem+Imagem";
-  const images = product.image_url ? [product.image_url] : [placeholderImg];
+  const images = product.image_urls.length > 0 ? product.image_urls : ["https://via.placeholder.com/1000?text=Sem+Imagem"];
 
-  const nextImage = () => setActiveImageIndex((prev) => (prev + 1) % images.length);
-  const prevImage = () => setActiveImageIndex((prev) => (prev - 1 + images.length) % images.length);
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const { left, top, width, height } = e.currentTarget.getBoundingClientRect();
-    const x = ((e.clientX - left) / width) * 100;
-    const y = ((e.clientY - top) / height) * 100;
-    setMousePosition({ x, y });
+  const handleAddToCart = () => {
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 3000);
   };
-
-  const maxQuantity = product.stock_quantity || 10;
-  const increaseQuantity = () => setQuantity(prev => Math.min(prev + 1, maxQuantity));
-  const decreaseQuantity = () => setQuantity(prev => Math.max(prev - 1, 1));
 
   return (
     <div className="product-detail-page fade-in">
@@ -116,86 +129,44 @@ export default function ProductDetailPage() {
         {/* Main Card Wrapper */}
         <div className="product-detail-card">
           
-          {/* Gallery */}
-          <div className="product-gallery-section">
-            <div className="relative">
-              {product.is_featured && (
-                <span className="badge-featured">Destaque</span>
-              )}
-
-              <div 
-                className="product-image-main"
-                onMouseEnter={() => setIsHoveringImage(true)}
-                onMouseLeave={() => setIsHoveringImage(false)}
-                onMouseMove={handleMouseMove}
-              >
-                <img
-                  src={images[activeImageIndex]}
-                  alt={`${product.name} - Imagem ${activeImageIndex + 1}`}
-                  style={{ opacity: isHoveringImage ? 0 : 1 }}
-                />
-                
-                {isHoveringImage && (
-                  <div 
-                    className="product-zoom-overlay"
-                    style={{
-                      backgroundImage: `url(${images[activeImageIndex]})`,
-                      backgroundPosition: `${mousePosition.x}% ${mousePosition.y}%`,
-                      backgroundSize: '200%',
-                      backgroundRepeat: 'no-repeat'
-                    }}
-                  />
-                )}
-
-                {images.length > 1 && (
-                  <>
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); prevImage(); }}
-                      className="mobile-nav-btn prev"
-                      aria-label="Imagem anterior"
-                    >
-                      <ChevronLeft size={24} />
-                    </button>
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); nextImage(); }}
-                      className="mobile-nav-btn next"
-                      aria-label="Próxima imagem"
-                    >
-                      <ChevronRight size={24} />
-                    </button>
-                  </>
-                )}
-              </div>
+          {/* LEFT COLUMN: Dedicated Gallery + Description below */}
+          <div className="product-main-left">
+            <div className="product-gallery-section">
+              <ProductGallery 
+                images={images} 
+                isFeatured={product.is_featured} 
+                productName={product.name} 
+              />
             </div>
 
-            {images.length > 1 && (
-              <div className="product-thumbnails">
-                {images.map((img, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setActiveImageIndex(idx)}
-                    className={`thumbnail-btn ${activeImageIndex === idx ? 'active' : ''}`}
-                    aria-label={`Ver imagem ${idx + 1}`}
-                  >
-                    <img src={img} alt={`Miniatura ${idx + 1}`} />
-                  </button>
-                ))}
-              </div>
-            )}
+            <div className="product-description-container">
+              <h2>Descrição do Produto</h2>
+              <div 
+                className="product-desc-text"
+                dangerouslySetInnerHTML={{ 
+                  __html: product.description || "Nenhuma descrição disponível para este produto." 
+                }}
+              />
+            </div>
           </div>
 
-          {/* Info */}
+          {/* RIGHT COLUMN: Info & Actions (Sticky) */}
           <div className="product-info-section">
-            
             <div className="product-rating">
               <div className="stars">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Star key={i} size={16} className="fill-current" />
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <Star 
+                    key={i} 
+                    size={16} 
+                    className={i <= Math.round(averageRating) ? "star-filled" : "star-empty"} 
+                  />
                 ))}
               </div>
-              <span className="rating-score">5.0</span>
+              <span className="rating-score">{averageRating.toFixed(1)}</span>
               <span style={{ color: 'var(--border)' }}>|</span>
-              <span className="rating-text">(Avaliações excelentes)</span>
+              <span className="rating-text">
+                ({reviews.length > 0 ? `${reviews.length} avaliações` : 'Nenhuma avaliação'})
+              </span>
             </div>
 
             <h1 className="product-title">{product.name}</h1>
@@ -213,71 +184,69 @@ export default function ProductDetailPage() {
               )}
             </div>
 
-            <div className="product-actions">
-              <div className="quantity-selector">
-                <span>Quantidade:</span>
-                <div className="qty-controls">
-                  <button 
-                    onClick={decreaseQuantity}
-                    className="qty-btn"
-                    disabled={quantity <= 1 || product.stock_quantity === 0}
-                  >
-                    <Minus size={18} />
-                  </button>
-                  <span className="qty-value">{quantity}</span>
-                  <button 
-                    onClick={increaseQuantity}
-                    className="qty-btn"
-                    disabled={quantity >= maxQuantity || product.stock_quantity === 0}
-                  >
-                    <Plus size={18} />
-                  </button>
-                </div>
-              </div>
-
-              <div className="purchase-buttons">
-                <button 
-                  disabled={product.stock_quantity === 0}
-                  className="btn-add"
-                >
-                  <ShoppingCart size={20} />
-                  Adicionar ao Carrinho
-                </button>
-                <button 
-                  disabled={product.stock_quantity === 0}
-                  className="btn-buy"
-                >
-                  <CreditCard size={20} />
-                  Comprar Agora
-                </button>
-              </div>
-            </div>
+            <ProductPurchaseActions 
+              product={product} 
+              onAddToCart={handleAddToCart} 
+            />
+            
+            <FreightSimulator />
 
             <ul className="product-benefits">
               <li className="benefit-item">
-                <Truck className="benefit-icon" size={24} />
+                <Truck className="benefit-icon" size={20} />
                 <span><strong>Frete Grátis</strong> para todo o Brasil.</span>
               </li>
               <li className="benefit-item">
-                <RotateCcw className="benefit-icon" size={24} />
-                <span><strong>Devolução grátis.</strong> Você tem 30 dias a partir da data de recebimento.</span>
+                <RotateCcw className="benefit-icon" size={20} />
+                <span><strong>Devolução grátis.</strong> 30 dias de garantia.</span>
               </li>
               <li className="benefit-item">
-                <ShieldCheck className="benefit-icon" size={24} />
-                <span><strong>Compra Segura.</strong> Receba o produto que está esperando ou devolvemos o dinheiro.</span>
+                <ShieldCheck className="benefit-icon" size={20} />
+                <span><strong>Compra Segura.</strong> Receba o que espera.</span>
               </li>
             </ul>
-
-            <div className="product-details">
-              <h2>Descrição do Produto</h2>
-              <div className="product-desc-text">
-                {product.description || "Nenhuma descrição disponível para este produto. Consulte-nos para mais detalhes!"}
-              </div>
-            </div>
-
           </div>
         </div>
+
+        {/* FULL WIDTH: Specifications Block below everything */}
+        {product.specifications && Object.keys(product.specifications).length > 0 && (
+          <div className="product-specs-full-width">
+            <h2>Especificações Técnicas</h2>
+            <div className="specs-grid-layout">
+              {Object.entries(product.specifications).map(([key, value]) => (
+                <div key={key} className="spec-card-item">
+                  <span className="spec-name">{key}</span>
+                  <span className="spec-value">{value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Reviews Section */}
+        <ProductReviews productId={product.id} />
+
+        {/* Related Products */}
+        {!relatedLoading && relatedProducts && relatedProducts.length > 0 && (
+          <div className="related-products-section">
+            <h2>Quem viu este produto também comprou</h2>
+            <div className="related-grid">
+              {relatedProducts.map(p => (
+                <ProductCard key={p.id} product={p} />
+              ))}
+            </div>
+          </div>
+        )}
+
       </div>
+      
+      {/* Toast Notification */}
+      {showToast && (
+        <div className="toast-notification">
+          <CheckCircle size={20} color="#10b981" />
+          <span>Produto adicionado ao carrinho!</span>
+        </div>
+      )}
     </div>
   );
 }

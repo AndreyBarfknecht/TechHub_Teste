@@ -37,11 +37,11 @@ const Hero: React.FC = () => {
 
         <div className="hero-image-wrapper">
           <div className="hero-image-composite">
-            <div className="main-image" style={featuredProduct?.image_url ? { background: 'white' } : {}}>
-              {featuredProduct?.image_url ? (
-                <img src={featuredProduct.image_url} alt={featuredProduct.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+            <div className="main-image" style={featuredProduct?.image_urls && featuredProduct.image_urls.length > 0 ? { background: 'white' } : {}}>
+              {featuredProduct?.image_urls && featuredProduct.image_urls.length > 0 ? (
+                <img src={featuredProduct.image_urls[0]} alt={featuredProduct.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
               ) : (
-                <div className="image-fallback">Tecnologia de Ponta</div>
+                <div className="image-placeholder" />
               )}
             </div>
             <div className="floating-badge" style={{ flexDirection: 'column', alignItems: 'flex-start', padding: '1rem' }}>
