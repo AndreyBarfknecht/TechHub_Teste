@@ -5,7 +5,7 @@ import "./ProductPurchaseActions.css";
 
 interface ProductPurchaseActionsProps {
   product: Product;
-  onAddToCart: () => void;
+  onAddToCart: (quantity: number) => void;
 }
 
 export const ProductPurchaseActions: React.FC<ProductPurchaseActionsProps> = ({ product, onAddToCart }) => {
@@ -16,7 +16,7 @@ export const ProductPurchaseActions: React.FC<ProductPurchaseActionsProps> = ({ 
   const decreaseQuantity = () => setQuantity(prev => Math.max(prev - 1, 1));
 
   const handleAddToCart = () => {
-    onAddToCart();
+    onAddToCart(quantity);
   };
 
   return (

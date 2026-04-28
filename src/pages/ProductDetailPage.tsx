@@ -102,9 +102,12 @@ export default function ProductDetailPage() {
 
   const images = product.image_urls.length > 0 ? product.image_urls : ["https://via.placeholder.com/1000?text=Sem+Imagem"];
 
-  const handleAddToCart = () => {
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 3000);
+  const handleAddToCart = (quantity: number) => {
+    if (product) {
+      addToCart(product, quantity);
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    }
   };
 
   return (

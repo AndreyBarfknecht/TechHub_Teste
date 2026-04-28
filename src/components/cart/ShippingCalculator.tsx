@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Truck, Search, Loader2 } from 'lucide-react';
+import { Search, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
 interface ShippingCalculatorProps {

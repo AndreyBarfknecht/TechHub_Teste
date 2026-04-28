@@ -7,7 +7,6 @@ import './Products.css'; // Assumindo que existe ou criar se necessário
 const Products = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const { addToCart } = useCart();
 
   useEffect(() => {
     const fetchProducts = async () => {

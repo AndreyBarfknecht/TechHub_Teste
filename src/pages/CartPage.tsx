@@ -95,8 +95,8 @@ const CartPage = () => {
 
                   {/* Imagem do produto */}
                   <div className="cart-item-image">
-                    {product.image_url ? (
-                      <img src={product.image_url} alt={product.name} />
+                    {product.image_urls && product.image_urls.length > 0 ? (
+                      <img src={product.image_urls[0]} alt={product.name} />
                     ) : (
                       <div className="cart-item-image-placeholder">
                         <ShoppingBag size={24} />
