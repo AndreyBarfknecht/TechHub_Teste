@@ -7,6 +7,7 @@ import './Products.css'; // Assumindo que existe ou criar se necessário
 const Products = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const { addToCart } = useCart();
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -14,13 +15,13 @@ const Products = () => {
         .from('products')
         .select('*, categories(name)')
         .order('created_at', { ascending: false });
-        
+
       if (!error && data) {
         setProducts(data);
       }
       setLoading(false);
     };
-    
+
     fetchProducts();
   }, []);
 
@@ -54,7 +55,7 @@ const Products = () => {
       <p style={{ color: 'var(--text-muted)', marginBottom: '3rem' }}>
         Explore toda a nossa coleção de produtos premium.
       </p>
-      
+
       {products.length === 0 ? (
         <p style={{ textAlign: 'center', color: '#666', fontStyle: 'italic', padding: '4rem 2rem', fontSize: '1.1rem' }}>
           Nenhum produto cadastrado ainda.
