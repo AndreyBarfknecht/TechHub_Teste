@@ -16,6 +16,7 @@ import type { Product } from "../types/product";
 import { useRelatedProducts } from "../hooks/useRelatedProducts";
 import { useProductReviews } from "../hooks/useProductReviews";
 import ProductCard from "../components/ui/ProductCard";
+import { useCart } from "../context/CartContext";
 
 // Refactored Components
 import { ProductGallery } from "../components/product/ProductGallery";
