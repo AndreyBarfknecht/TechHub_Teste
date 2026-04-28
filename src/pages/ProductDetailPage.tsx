@@ -49,6 +49,7 @@ export default function ProductDetailPage() {
 
   const { reviews, averageRating } = useProductReviews(id);
   const { relatedProducts, loading: relatedLoading } = useRelatedProducts(product?.category_id, product?.id);
+  const { addToCart } = useCart();
 
   useEffect(() => {
     async function fetchProduct() {
