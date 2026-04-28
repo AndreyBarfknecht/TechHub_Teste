@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Product } from '../types/product';
-import { useCart } from '../context/CartContext';
-import './Products.css';
+import ProductCard from '../components/ui/ProductCard';
+import './Products.css'; // Assumindo que existe ou criar se necessário
 
 const Products = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -63,42 +63,7 @@ const Products = () => {
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '2rem' }}>
           {products.map((prod) => (
-            <div key={prod.id} className="card" style={{ cursor: 'pointer' }}>
-                <div
-                  className="product-image"
-                  style={{
-                    height: '250px',
-                    backgroundImage: prod.image_url ? `url("${prod.image_url}")` : 'none',
-                    backgroundColor: prod.image_url ? 'transparent' : '#f5f5f5',
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: 'var(--radius-lg) var(--radius-lg) 0 0'
-                  }}
-                >
-                {!prod.image_url && <div style={{ width: 100, height: 100, background: '#e0e0e0', borderRadius: 16 }} />}
-              </div>
-              <div style={{ padding: '1.5rem' }}>
-                <h3 style={{ marginBottom: '0.5rem' }}>{prod.name}</h3>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1rem' }}>
-                  {prod.description || 'Sem descrição disponível.'}
-                </p>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontWeight: 700, fontSize: '1.2rem', color: 'var(--primary)' }}>
-                    {prod.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                  </span>
-                  <button
-                    className="btn-primary"
-                    style={{ padding: '0.5rem 1rem' }}
-                    onClick={() => addToCart(prod)}
-                  >
-                    Adicionar ao Carrinho
-                  </button>
-                </div>
-              </div>
-            </div>
+            <ProductCard key={prod.id} product={prod} />
           ))}
         </div>
       )}

@@ -1,0 +1,284 @@
+/* Product Detail Page Container */
+.product-detail-page {
+  padding-top: 1.5rem;
+  padding-bottom: 5rem;
+  background-color: var(--bg-color);
+}
+
+/* Breadcrumb */
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 1.5rem;
+}
+
+/* Main Layout Card */
+.product-detail-card {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 2rem;
+}
+
+/* LEFT COLUMN - SIMPLE GALLERY & DESCRIPTION */
+.product-main-left {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.product-gallery-section {
+  padding: 1.5rem;
+  background: #fff;
+}
+
+.product-gallery-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.product-image-main-wrapper {
+  width: 100%;
+  aspect-ratio: 1/1;
+  border-radius: var(--radius-md);
+  background: #fff;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.product-image-main-display {
+  width: 100%;
+  height: 100%;
+  cursor: zoom-in;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.product-image-main-display img {
+  max-width: 95%;
+  max-height: 95%;
+  object-fit: contain;
+  transition: opacity 0.2s ease;
+}
+
+.product-zoom-view {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  background-color: white;
+  z-index: 5;
+  background-size: 250%;
+}
+
+/* SIMPLE THUMBNAILS LIST BELOW */
+.product-thumbnails-list {
+  display: flex;
+  gap: 0.75rem;
+  overflow-x: auto;
+  padding: 0.5rem 0;
+}
+
+.thumbnail-item-btn {
+  width: 70px;
+  height: 70px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--border);
+  padding: 4px;
+  background: white;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.thumbnail-item-btn.active {
+  border-color: var(--primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.thumbnail-item-btn img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Description below images */
+.product-description-container {
+  padding: 2rem 1.5rem;
+  border-top: 1px solid var(--border);
+  background: white;
+}
+
+.product-description-container h2 {
+  font-size: 1.25rem;
+  margin-bottom: 1.25rem;
+  color: var(--text-main);
+  font-family: 'Outfit', sans-serif;
+}
+
+.product-desc-text {
+  font-size: 0.95rem;
+  line-height: 1.8;
+  color: var(--text-main);
+}
+
+/* RIGHT COLUMN - Sticky Info */
+.product-info-section {
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+}
+
+.product-title {
+  font-size: 1.75rem;
+  font-weight: 800;
+  margin-bottom: 1.25rem;
+  color: var(--text-main);
+  letter-spacing: -0.02em;
+}
+
+.product-pricing {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: var(--bg-color);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+
+.price-main {
+  font-size: 2.25rem;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.product-benefits {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--border);
+}
+
+.benefit-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+  color: var(--text-main);
+}
+
+.benefit-icon { color: #059669; }
+
+/* FULL WIDTH SPECIFICATIONS */
+.product-specs-full-width {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: 3rem;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 3rem;
+}
+
+.product-specs-full-width h2 {
+  font-size: 1.5rem;
+  margin-bottom: 2rem;
+  text-align: center;
+  font-family: 'Outfit', sans-serif;
+}
+
+.specs-grid-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+.spec-card-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 1.25rem;
+  background: var(--bg-color);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.spec-name {
+  font-weight: 700;
+  color: var(--text-main);
+  font-size: 0.9rem;
+}
+
+.spec-value {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  text-align: right;
+}
+
+/* DESKTOP REFINEMENTS (50/50 Split) */
+@media (min-width: 992px) {
+  .product-detail-card {
+    flex-direction: row;
+    align-items: stretch;
+  }
+
+  .product-main-left {
+    width: 50%;
+    border-right: 1px solid var(--border);
+  }
+
+  .product-gallery-section {
+    padding: 3rem;
+  }
+
+  .product-description-container {
+    padding: 3rem;
+  }
+
+  .product-info-section {
+    width: 50%;
+    padding: 3.5rem;
+    position: sticky;
+    top: 2rem;
+    border-top: none;
+    height: fit-content;
+  }
+
+  .specs-grid-layout {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+}
+
+/* Utilities */
+.star-filled { fill: #fbbf24; color: #fbbf24; }
+.star-empty { color: #e2e8f0; }
+
+.badge-featured {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  background: var(--primary);
+  color: white;
+  padding: 0.35rem 0.75rem;
+  border-radius: 100px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  z-index: 10;
+}

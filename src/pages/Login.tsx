@@ -38,8 +38,12 @@ const Login = () => {
         alert('Cadastro realizado com sucesso! Faça o login.');
         setIsLogin(true);
       }
-    } catch (err: any) {
-      setError(err.message || 'Erro ao autenticar');
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Erro ao autenticar');
+      }
     } finally {
       setLoading(false);
     }
