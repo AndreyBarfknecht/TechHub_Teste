@@ -1,0 +1,435 @@
+/* src/pages/CheckoutPage.css */
+.checkout-page {
+  padding: 2rem 0;
+  min-height: calc(100vh - 140px);
+}
+
+.checkout-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.checkout-title {
+  font-family: var(--font-heading, 'Outfit', sans-serif);
+  font-size: 2rem;
+  color: var(--text-main);
+  margin-bottom: 0.5rem;
+}
+
+.checkout-layout {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 2rem;
+  align-items: start;
+}
+
+/* Stepper */
+.stepper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2.5rem;
+  position: relative;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.stepper::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: var(--border);
+  transform: translateY(-50%);
+  z-index: 0;
+}
+
+.step {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: var(--bg-color);
+  padding: 0 1rem;
+}
+
+.step-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: var(--surface);
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  color: var(--text-muted);
+  transition: var(--transition);
+}
+
+.step.active .step-circle {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.step.completed .step-circle {
+  background-color: #10b981;
+  border-color: #10b981;
+  color: white;
+}
+
+.step-label {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.step.active .step-label {
+  color: var(--primary);
+}
+
+.step.completed .step-label {
+  color: var(--text-main);
+}
+
+/* Form layout */
+.checkout-form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.form-row {
+  display: flex;
+  gap: 1rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.form-group label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-main);
+}
+
+.form-input {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--surface);
+  color: var(--text-main);
+  transition: var(--transition);
+  font-family: inherit;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.form-error {
+  color: #ef4444;
+  font-size: 0.75rem;
+  min-height: 1rem;
+}
+
+/* Payment Layout */
+.payment-methods {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.payment-method-card {
+  flex: 1;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  transition: var(--transition);
+  background-color: var(--surface);
+}
+
+.payment-method-card:hover {
+  border-color: var(--primary-light);
+}
+
+.payment-method-card.selected {
+  border-color: var(--primary);
+  background-color: rgba(79, 70, 229, 0.05); /* very light primary variant */
+}
+
+/* Credit Card Preview */
+.credit-card-preview {
+  width: 100%;
+  max-width: 350px;
+  height: 220px;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, #1f2937, #111827);
+  color: white;
+  padding: 1.5rem;
+  position: relative;
+  box-shadow: var(--shadow-lg);
+  margin: 0 auto 2rem auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+  transition: transform 0.6s;
+  transform-style: preserve-3d;
+}
+
+.credit-card-preview.flipped {
+  transform: rotateY(180deg);
+}
+
+.cc-front, .cc-back {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem;
+}
+
+.cc-front {
+  justify-content: space-between;
+}
+
+.cc-back {
+  transform: rotateY(180deg);
+  padding: 0;
+  justify-content: center;
+}
+
+.cc-chip {
+  width: 45px;
+  height: 35px;
+  background: linear-gradient(135deg, #fbbf24, #d97706);
+  border-radius: 4px;
+}
+
+.cc-number {
+  font-family: monospace;
+  font-size: 1.4rem;
+  letter-spacing: 2px;
+  margin: 1rem 0;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+
+.cc-footer {
+  display: flex;
+  justify-content: space-between;
+  text-transform: uppercase;
+  font-size: 0.875rem;
+}
+
+.cc-name {
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cc-stripe {
+  position: absolute;
+  top: 30px;
+  left: 0;
+  width: 100%;
+  height: 40px;
+  background-color: #000;
+}
+
+.cc-cvv-value {
+  margin-top: 20px;
+  margin-right: 20px;
+  align-self: flex-end;
+  background: white;
+  color: black;
+  padding: 0.25rem 0.5rem;
+  font-family: monospace;
+  text-align: right;
+  width: 80%;
+  border-radius: 2px;
+}
+
+/* PIX Layout */
+.pix-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 2rem;
+  background-color: var(--surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+
+.pix-qr {
+  margin: 1.5rem 0;
+  padding: 1rem;
+  background: white;
+  border-radius: var(--radius-sm);
+  display: inline-block;
+}
+
+/* Action Buttons */
+.checkout-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.btn-secondary {
+  padding: 0.75rem 1.5rem;
+  background-color: transparent;
+  color: var(--text-main);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.btn-secondary:hover {
+  background-color: var(--surface);
+  border-color: var(--text-muted);
+}
+
+/* Success Step */
+.success-container {
+  text-align: center;
+  padding: 3rem 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.success-icon-wrapper {
+  width: 80px;
+  height: 80px;
+  background-color: #10b981;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  margin-bottom: 1.5rem;
+  animation: scale-up 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.success-container h2 {
+  font-family: var(--font-heading);
+  color: var(--text-main);
+  margin-bottom: 0.5rem;
+}
+
+.success-container p {
+  color: var(--text-muted);
+  margin-bottom: 2rem;
+}
+
+.success-details {
+  background-color: var(--surface);
+  padding: 2rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  width: 100%;
+  max-width: 500px;
+  text-align: left;
+  margin-bottom: 2rem;
+}
+
+.success-details-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.success-details-row:last-child {
+  border-bottom: none;
+}
+
+.success-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+/* Summaries Sidebar */
+.checkout-summary-col .card {
+  position: sticky;
+  top: 100px; /* Adjust according to navbar */
+}
+.summary-line {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.8rem;
+  font-size: 0.95rem;
+  color: var(--text-main);
+}
+.summary-total {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 1rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+.summary-divider {
+  height: 1px;
+  background-color: var(--border);
+  margin: 1rem 0;
+}
+
+@media (max-width: 768px) {
+  .checkout-layout {
+    grid-template-columns: 1fr;
+  }
+  
+  .checkout-summary-col .card {
+    position: static;
+  }
+  
+  .checkout-summary-col {
+    order: -1;
+    margin-bottom: 2rem;
+  }
+  
+  .stepper::before {
+    display: none;
+  }
+  
+  .stepper {
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: center;
+  }
+  
+  .form-row {
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+}
