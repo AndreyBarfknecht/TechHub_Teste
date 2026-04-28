@@ -4,7 +4,9 @@ import Home from "./pages/Home.tsx";
 import Products from "./pages/Products.tsx";
 import Login from "./pages/Login.tsx";
 import AdminPage from "./pages/AdminPage.tsx";
+import CartPage from "./pages/CartPage.tsx";
 import { AuthProvider } from "./context/AuthContext.tsx";
+import { CartProvider } from "./context/CartContext.tsx";
 
 function AppContent() {
   const location = useLocation();
@@ -17,6 +19,7 @@ function AppContent() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/products" element={<Products />} />
+          <Route path="/cart" element={<CartPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/admin" element={<AdminPage />} />
         </Routes>
@@ -28,9 +31,11 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <AppContent />
-      </Router>
+      <CartProvider>
+        <Router>
+          <AppContent />
+        </Router>
+      </CartProvider>
     </AuthProvider>
   );
 }
