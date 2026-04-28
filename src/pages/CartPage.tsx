@@ -4,16 +4,27 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Trash2, Plus, Minus, ShoppingBag, ArrowLeft, ShoppingCart } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { ShippingCalculator } from '../components/cart/ShippingCalculator';
 import './CartPage.css';
 
 const CartPage = () => {
   const { items, totalPrice, totalItems, removeFromCart, updateQuantity, clearCart } = useCart();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [shippingFee, setShippingFee] = React.useState<number>(totalPrice >= 200 ? 0 : 25.9);
   const [coupon, setCoupon] = React.useState('');
   const [discount, setDiscount] = React.useState<number>(0);
+
+  const handleCheckout = () => {
+    if (!user) {
+      navigate('/login?redirect=/checkout');
+    } else {
+      navigate('/checkout');
+    }
+  };
+
 
   // Update shipping fee if totalPrice changes (handle free shipping threshold)
   React.useEffect(() => {
@@ -234,7 +245,11 @@ const CartPage = () => {
                 ou 10x de {formatBRL(orderTotal / 10)} sem juros
               </p>
 
-              <button className="btn-primary checkout-btn">
+              <button 
+                className="btn-primary checkout-btn" 
+                onClick={handleCheckout} 
+                disabled={items.length === 0}
+              >
                 Finalizar Compra
               </button>
 
