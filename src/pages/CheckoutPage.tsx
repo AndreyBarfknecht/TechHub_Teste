@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, CreditCard, Loader2, MapPin, QrCode, ArrowRight, ShoppingBag, Truck } from 'lucide-react';
+import { Check, CreditCard, Loader2, MapPin, QrCode, ArrowRight, ShoppingBag, Truck, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { supabase } from '../lib/supabase';
@@ -208,6 +208,10 @@ const CheckoutPage = () => {
     setSubmitError(null);
 
     try {
+      console.log('user.id:', user?.id);
+      console.log('dados do pedido:', { subtotal: totalPrice, shipping_fee: shippingFee, total_amount: orderTotal, payment_method: payment.method });
+      console.log('itens do carrinho:', items);
+
       // 1. Upsert Profile
       const { error: profileError } = await supabase.from('profiles').upsert({
         id: user.id,
@@ -215,33 +219,42 @@ const CheckoutPage = () => {
         cpf: delivery.cpf,
         phone: delivery.phone,
         cep: delivery.cep,
-        address: delivery.address,
+        address: `${delivery.address}, ${delivery.number}`,
         city: delivery.city,
         state: delivery.state
-      });
+      }, { onConflict: 'id' });
+      
       if (profileError) throw profileError;
 
       // 2. Insert Order
-      const fullAddress = `${delivery.address}, ${delivery.number} ${delivery.complement ? '- ' + delivery.complement : ''}. ${delivery.city} - ${delivery.state}. CEP: ${delivery.cep}`;
-      const { data: orderData, error: orderError } = await supabase.from('orders').insert({
+      const fullAddress = `${delivery.address}, ${delivery.number}` + 
+                          (delivery.complement ? ` - ${delivery.complement}` : '') + 
+                          ` - ${delivery.city}/${delivery.state} - CEP: ${delivery.cep}`;
+      const orderId = crypto.randomUUID();
+
+      const { error: orderError } = await supabase.from('orders').insert({
+        id: orderId,
         user_id: user.id,
         status: 'paid', // Fictício
         subtotal: totalPrice,
         shipping_fee: shippingFee,
         total_amount: orderTotal,
         shipping_address: fullAddress,
-        payment_method: payment.method
-      }).select().single();
+        payment_method: payment.method,
+        created_at: new Date().toISOString()
+      });
       
       if (orderError) throw orderError;
-      setCreatedOrderId(orderData.id);
+      setCreatedOrderId(orderId);
 
       // 3. Insert Items
       const orderItems = items.map(item => ({
-        order_id: orderData.id,
+        id: crypto.randomUUID(),
+        order_id: orderId,
         product_id: item.product.id,
         quantity: item.quantity,
-        unit_price: item.product.price
+        unit_price: item.product.price,
+        created_at: new Date().toISOString()
       }));
 
       const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
@@ -251,12 +264,11 @@ const CheckoutPage = () => {
       clearCart();
       setCurrentStep(3);
     } catch (err: unknown) {
-      console.error("Erro ao salvar pedido", err);
-      if (err instanceof Error) {
-        setSubmitError(err.message);
-      } else {
-        setSubmitError("Erro desconhecido ao processar pedido.");
-      }
+      console.error("Erro completo:", JSON.stringify(err));
+      const msg = err instanceof Error 
+        ? err.message 
+        : (err as { message?: string })?.message ?? "Erro desconhecido ao processar pedido.";
+      setSubmitError(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -463,8 +475,9 @@ const CheckoutPage = () => {
                 )}
 
                 {submitError && (
-                  <div style={{ backgroundColor: '#fee2e2', color: '#b91c1c', padding: '1rem', borderRadius: '4px', marginTop: '1.5rem' }}>
-                    {submitError}
+                  <div className="error-message">
+                    <AlertCircle size={20} />
+                    <span>{submitError}</span>
                   </div>
                 )}
 
@@ -485,12 +498,10 @@ const CheckoutPage = () => {
                 </div>
                 <h2>Pedido realizado com sucesso! 🎉</h2>
                 <p>Nós recebemos o seu pedido e estamos processando as informações.</p>
+                
+                <div className="order-badge">#{createdOrderId.substring(0, 8)}</div>
 
                 <div className="success-details">
-                  <div className="success-details-row">
-                    <span style={{ color: 'var(--text-muted)' }}>Pedido</span>
-                    <span style={{ fontWeight: 500 }}>#{createdOrderId.substring(0, 8)}</span>
-                  </div>
                   <div className="success-details-row">
                     <span style={{ color: 'var(--text-muted)' }}>Método</span>
                     <span style={{ fontWeight: 500 }}>{payment.method === 'pix' ? 'PIX' : 'Cartão de Crédito'}</span>
