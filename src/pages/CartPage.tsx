@@ -12,15 +12,21 @@ const CartPage = () => {
   const { items, totalPrice, totalItems, removeFromCart, updateQuantity, clearCart } = useCart();
   const navigate = useNavigate();
   const [shippingFee, setShippingFee] = React.useState<number>(totalPrice >= 200 ? 0 : 25.9);
+  const [isManuallyCalculated, setIsManuallyCalculated] = React.useState(false);
   const [coupon, setCoupon] = React.useState('');
   const [discount, setDiscount] = React.useState<number>(0);
 
   // Update shipping fee if totalPrice changes (handle free shipping threshold)
   React.useEffect(() => {
-    if (totalPrice >= 200) {
+    // We only automatically set to free (0) if the user hasn't manually calculated a rate yet.
+    // This allows them to see their API/mock results for the class project.
+    if (totalPrice >= 200 && !isManuallyCalculated) {
       setShippingFee(0);
+    } else if (!isManuallyCalculated && shippingFee === 0 && totalPrice < 200) {
+      // If it was free but now it's not, and user hasn't calculated yet, reset to default
+      setShippingFee(25.9);
     }
-  }, [totalPrice]);
+  }, [totalPrice, isManuallyCalculated, shippingFee]);
 
   const handleApplyCoupon = () => {
     // Simulating a simple coupon system
@@ -188,18 +194,11 @@ const CartPage = () => {
                 <div className="shipping-calculator-wrapper">
                   <ShippingCalculator
                     onShippingRateChange={(rate) => {
-                      if (totalPrice < 200) {
-                        setShippingFee(rate);
-                      }
+                      setShippingFee(rate);
+                      setIsManuallyCalculated(true);
                     }}
                   />
                 </div>
-
-                {shippingFee > 0 && (
-                  <p className="shipping-hint">
-                    Faltam {formatBRL(200 - totalPrice)} para frete grátis
-                  </p>
-                )}
               </div>
 
               <div className="coupon-section">
