@@ -90,20 +90,14 @@ const CartContext = createContext<CartContextType | null>(null);
 // ----- PROVIDER -----
 // O Provider é o componente que "envolve" o app e disponibiliza o carrinho pra todos.
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [items, dispatch] = useReducer(cartReducer, []);
-
-  // Ao iniciar o app, carrega o carrinho salvo no localStorage (persiste entre refreshes)
-  useEffect(() => {
+  const [items, dispatch] = useReducer(cartReducer, [], () => {
     try {
       const saved = localStorage.getItem('techhub_cart');
-      if (saved) {
-        const parsed: CartItem[] = JSON.parse(saved);
-        dispatch({ type: 'LOAD_FROM_STORAGE', items: parsed });
-      }
+      return saved ? JSON.parse(saved) : [];
     } catch {
-      // Se o JSON estiver corrompido, ignora
+      return [];
     }
-  }, []);
+  });
 
   // Sempre que o carrinho mudar, salva no localStorage
   useEffect(() => {
