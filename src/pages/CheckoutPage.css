@@ -39,6 +39,10 @@
 .checkout-summary-col .card {
   position: sticky;
   top: 80px;
+  padding: 2rem;
+  border-top: 4px solid var(--primary);
+  box-shadow: var(--shadow-md);
+  border-radius: var(--radius-md);
 }
 
 /* 1. STEPPER */
@@ -438,10 +442,11 @@
 .summary-total {
   display: flex;
   justify-content: space-between;
-  margin-top: 1rem;
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--text-main);
+  align-items: center;
+  margin-top: 0.5rem;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--primary);
 }
 .summary-divider {
   height: 1px;

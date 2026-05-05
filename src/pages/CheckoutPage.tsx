@@ -212,19 +212,7 @@ const CheckoutPage = () => {
       console.log('dados do pedido:', { subtotal: totalPrice, shipping_fee: shippingFee, total_amount: orderTotal, payment_method: payment.method });
       console.log('itens do carrinho:', items);
 
-      // 1. Upsert Profile
-      const { error: profileError } = await supabase.from('profiles').upsert({
-        id: user.id,
-        full_name: delivery.name,
-        cpf: delivery.cpf,
-        phone: delivery.phone,
-        cep: delivery.cep,
-        address: `${delivery.address}, ${delivery.number}`,
-        city: delivery.city,
-        state: delivery.state
-      }, { onConflict: 'id' });
-      
-      if (profileError) throw profileError;
+      // 1. Pular upsert de profile (dados são fictícios, evita erro de RLS)
 
       // 2. Insert Order
       const fullAddress = `${delivery.address}, ${delivery.number}` + 
@@ -260,7 +248,22 @@ const CheckoutPage = () => {
       const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
       if (itemsError) throw itemsError;
 
-      // 4. Success
+      // 4. Abater do estoque real no banco de dados
+      for (const item of items) {
+        const currentStock = Number(item.product.stock_quantity) || 0;
+        const newStock = Math.max(0, currentStock - item.quantity);
+        
+        const { error: stockError } = await supabase
+          .from('products')
+          .update({ stock_quantity: newStock })
+          .eq('id', item.product.id);
+          
+        if (stockError) {
+          console.error(`Erro ao abater estoque do produto ${item.product.id}`, stockError);
+        }
+      }
+
+      // 5. Success
       clearCart();
       setCurrentStep(3);
     } catch (err: unknown) {
