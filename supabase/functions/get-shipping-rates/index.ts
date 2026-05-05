@@ -4,7 +4,7 @@ interface ShippingRequest {
   cep: string;
 }
 
-interface MelhorEnviosResponse {
+interface MelhorEnviosRate {
   id: number;
   price: number;
   name: string;
@@ -17,7 +17,7 @@ export default async function handler(req: Request): Promise<Response> {
   }
 
   try {
-    const { cep } = await req.json();
+    const { cep } = await req.json() as ShippingRequest;
     const token = Deno.env.get('MELHOR_ENVIOS_TOKEN');
 
     if (!token) {
@@ -71,22 +71,33 @@ export default async function handler(req: Request): Promise<Response> {
     }
 
     // Extract the cheapest rate
-    const rates = data.map((rate: any) => rate);
-    const cheapest = rates.reduce((prev: any, curr: any) => {
+    if (!Array.isArray(data) || data.length === 0) {
+      throw new Error("Nenhuma opção de frete encontrada.");
+    }
+
+    const rates = data as MelhorEnviosRate[];
+    const cheapest = rates.reduce((prev, curr) => {
       return prev.price < curr.price ? prev : curr;
     });
 
     return new Response(
-
-      JSON.stringify({ rate: cheapest.price }),
+      JSON.stringify({ 
+        rate: cheapest.price,
+        delivery_days: cheapest.delivery_days,
+        carrier: cheapest.name
+      }),
       { headers: { "Content-Type": "application/json" } }
     );
 
   } catch (error) {
     console.error("Shipping Error:", error);
+    const message = error instanceof Error ? error.message : "Erro interno ao processar frete";
     return new Response(
-      JSON.stringify({ error: "Erro interno ao processar frete" }),
+      JSON.stringify({ error: message }),
       { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
 }
+
+// Invoke the serve function to start the server (Deno requirement)
+serve(handler);

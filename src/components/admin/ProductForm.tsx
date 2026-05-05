@@ -87,7 +87,7 @@ export default function ProductForm({ onProductAdded, editingProduct, onCancelEd
     setLoading(true);
 
     try {
-      let finalImageUrls = [...currentImageUrls];
+      const finalImageUrls = [...currentImageUrls];
 
       if (imageFiles.length > 0) {
         for (const file of imageFiles) {

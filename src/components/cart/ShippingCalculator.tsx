@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Search, Loader2 } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { calculateShippingRate, type ShippingRate } from '../../lib/shipping';
 
 interface ShippingCalculatorProps {
   onShippingRateChange: (rate: number) => void;
@@ -10,33 +10,21 @@ export function ShippingCalculator({ onShippingRateChange }: ShippingCalculatorP
   const [cep, setCep] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [shippingRate, setShippingRate] = useState<number | null>(null);
+  const [result, setResult] = useState<ShippingRate | null>(null);
 
-  const calculateShipping = async (e: React.FormEvent) => {
+  const handleCalculate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (cep.length !== 8) {
-      setError('CEP inválido. Insira 8 dígitos.');
-      return;
-    }
-
     setLoading(true);
     setError('');
 
     try {
-      // This calls the Supabase Edge Function proxy to avoid exposing the Melhor Envios token
-      const { data, error: apiError } = await supabase.functions.invoke('get-shipping-rates', {
-        body: { cep }
-      });
-
-      if (apiError) throw apiError;
-      if (!data || !data.rate) throw new Error('Não foi possível calcular o frete para este CEP.');
-
-      const rateValue = data.rate;
-      setShippingRate(rateValue);
-      onShippingRateChange(rateValue);
-    } catch (err: any) {
-      setError(err.message || 'Erro ao calcular frete.');
-      setShippingRate(null);
+      const data = await calculateShippingRate(cep);
+      setResult(data);
+      onShippingRateChange(data.rate);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Erro ao calcular frete.';
+      setError(message);
+      setResult(null);
       onShippingRateChange(0);
     } finally {
       setLoading(false);
@@ -45,7 +33,7 @@ export function ShippingCalculator({ onShippingRateChange }: ShippingCalculatorP
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-      <form onSubmit={calculateShipping} style={{ display: 'flex', gap: '8px' }}>
+      <form onSubmit={handleCalculate} style={{ display: 'flex', gap: '8px' }}>
         <div style={{ position: 'relative', flex: 1 }}>
           <input
             type="text"
@@ -74,19 +62,29 @@ export function ShippingCalculator({ onShippingRateChange }: ShippingCalculatorP
 
       {error && <p style={{ color: '#dc2626', fontSize: '12px', margin: 0 }}>{error}</p>}
 
-      {shippingRate !== null && !error && (
+      {result && !error && (
         <div style={{
           padding: '12px',
           backgroundColor: '#f0fdf4',
           borderRadius: '8px',
           border: '1px solid #bbf7d0',
           display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
+          flexDirection: 'column',
+          gap: '4px'
         }}>
-          <span style={{ fontSize: '13px', color: '#166534' }}>Melhor Opção de Frete:</span>
-          <span style={{ fontWeight: 'bold', color: '#166534' }}>
-            {shippingRate.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+          {result.city && (
+            <div style={{ fontSize: '12px', color: '#15803d', marginBottom: '4px', borderBottom: '1px solid #bbf7d0', paddingBottom: '4px' }}>
+              📍 <strong>{result.city}, {result.state}</strong>
+            </div>
+          )}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '13px', color: '#166534', fontWeight: 500 }}>{result.carrier}</span>
+            <span style={{ fontWeight: 'bold', color: '#166534' }}>
+              {result.rate.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+            </span>
+          </div>
+          <span style={{ fontSize: '11px', color: '#15803d' }}>
+            Prazo de entrega: aproximadamente {result.deliveryDays} dias úteis.
           </span>
         </div>
       )}
