@@ -8,6 +8,7 @@ import Login from "./pages/Login";
 import AdminPage from "./pages/AdminPage";
 import ProductDetailPage from "./pages/ProductDetailPage";
 import CartPage from "./pages/CartPage";
+import CheckoutPage from "./pages/CheckoutPage";
 import ScrollToTop from "./components/layout/ScrollToTop";
 import { AuthProvider } from "./context/AuthContext";
 import { CartProvider } from "./context/CartContext";
@@ -27,6 +28,7 @@ function AppContent() {
           <Route path="/products" element={<Products />} />
           <Route path="/product/:id" element={<ProductDetailPage />} />
           <Route path="/cart" element={<CartPage />} />
+          <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/admin" element={<AdminPage />} />
         </Routes>
