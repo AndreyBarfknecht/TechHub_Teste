@@ -17,11 +17,13 @@ export async function getAddressFromCep(cep: string) {
 
   try {
     const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+    if (!response.ok) return null;
     const data = await response.json();
     if (data.erro) return null;
     return {
-      city: data.localidade,
-      state: data.uf
+      city: data.localidade || '',
+      state: data.uf || '',
+      address: data.logradouro || ''
     };
   } catch (err) {
     console.error('Error fetching ViaCEP:', err);
@@ -40,7 +42,7 @@ export async function calculateShippingRate(cep: string): Promise<ShippingRate> 
     throw new Error('CEP inválido. Insira 8 dígitos.');
   }
 
-  // Fetch address info for confirmation
+  // Fetch address info first (crucial for city confirmation)
   const addressInfo = await getAddressFromCep(cleanCep);
 
   try {
@@ -54,23 +56,23 @@ export async function calculateShippingRate(cep: string): Promise<ShippingRate> 
         rate: data.rate,
         deliveryDays: data.delivery_days || 5,
         carrier: data.carrier || 'Melhor Envios',
-        city: addressInfo?.city,
-        state: addressInfo?.state
+        city: addressInfo?.city || data.city,
+        state: addressInfo?.state || data.state
       };
     }
     
-    // If Supabase function is not found or fails, we fall back to mock logic
-    console.warn('Supabase Edge Function failed or not configured. Using fallback mock logic.');
+    // Fallback to mock logic
+    const mock = getMockShippingRate(cleanCep);
     return {
-      ...getMockShippingRate(cleanCep),
+      ...mock,
       city: addressInfo?.city,
       state: addressInfo?.state
     };
 
-  } catch (err) {
-    console.warn('Error invoking Supabase function:', err);
+  } catch {
+    const mock = getMockShippingRate(cleanCep);
     return {
-      ...getMockShippingRate(cleanCep),
+      ...mock,
       city: addressInfo?.city,
       state: addressInfo?.state
     };

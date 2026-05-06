@@ -1,6 +1,8 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Minus, Plus, ShoppingCart, CreditCard } from "lucide-react";
 import type { Product } from "../../types/product";
+import { useAuth } from "../../context/AuthContext";
 import "./ProductPurchaseActions.css";
 
 interface ProductPurchaseActionsProps {
@@ -10,6 +12,8 @@ interface ProductPurchaseActionsProps {
 
 export const ProductPurchaseActions: React.FC<ProductPurchaseActionsProps> = ({ product, onAddToCart }) => {
   const [quantity, setQuantity] = useState(1);
+  const navigate = useNavigate();
+  const { user } = useAuth();
 
   const maxQuantity = product.stock_quantity || 10;
   const increaseQuantity = () => setQuantity(prev => Math.min(prev + 1, maxQuantity));
@@ -17,6 +21,15 @@ export const ProductPurchaseActions: React.FC<ProductPurchaseActionsProps> = ({ 
 
   const handleAddToCart = () => {
     onAddToCart(quantity);
+  };
+
+  const handleBuyNow = () => {
+    onAddToCart(quantity);
+    if (!user) {
+      navigate('/login?redirect=/checkout');
+    } else {
+      navigate('/checkout');
+    }
   };
 
   return (
@@ -57,6 +70,7 @@ export const ProductPurchaseActions: React.FC<ProductPurchaseActionsProps> = ({ 
         <button 
           disabled={product.stock_quantity === 0}
           className="btn-buy"
+          onClick={handleBuyNow}
           type="button"
         >
           <CreditCard size={20} />

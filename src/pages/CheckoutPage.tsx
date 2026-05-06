@@ -6,437 +6,231 @@ import { useCart } from '../context/CartContext';
 import { supabase } from '../lib/supabase';
 import './CheckoutPage.css';
 
+import { calculateShippingRate } from '../lib/shipping';
+
 const CheckoutPage = () => {
   const { user, loading: authLoading } = useAuth();
   const { items, totalPrice, totalItems, clearCart } = useCart();
   const navigate = useNavigate();
 
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!authLoading && !user) {
-      navigate('/login?redirect=/checkout');
-    }
-  }, [user, authLoading, navigate]);
-
-  // Stepper state
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [createdOrderId, setCreatedOrderId] = useState<string>('');
+  const [finalSummary, setFinalSummary] = useState<{ subtotal: number; shipping: number; total: number } | null>(null);
 
-  // Shipping state
-  const shippingFee = totalPrice >= 200 ? 0 : 25.9;
+  const [shippingFee, setShippingFee] = useState<number>(25.9);
+  const [shippingInfo, setShippingInfo] = useState<{ carrier: string; days: number } | null>(null);
+  const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
+  const [isManuallyCalculated, setIsManuallyCalculated] = useState(false);
   const orderTotal = totalPrice + shippingFee;
 
-  // Delivery Form State
   const [delivery, setDelivery] = useState({
-    name: '',
-    cpf: '',
-    phone: '',
-    cep: '',
-    address: '',
-    number: '',
-    complement: '',
-    city: '',
-    state: ''
+    name: '', cpf: '', phone: '', cep: '', address: '', number: '', complement: '', city: '', state: ''
   });
   const [deliveryErrors, setDeliveryErrors] = useState<Record<string, string>>({});
 
-  // Payment Form State
   const [payment, setPayment] = useState({
     method: 'pix' as 'pix' | 'credit_card',
-    cardNumber: '',
-    cardName: '',
-    cardExpiry: '',
-    cardCvv: '',
-    cardFlag: ''
+    cardNumber: '', cardName: '', cardExpiry: '', cardCvv: '', cardFlag: ''
   });
-  const [paymentErrors, setPaymentErrors] = useState<Record<string, string>>({});
   const [focusedCvv, setFocusedCvv] = useState(false);
 
-  // Load existing profile data
+  // ----- VIA CEP & SHIPPING -----
+  const handleCalculateShipping = React.useCallback(async (cepToCalc: string) => {
+    const cepNumbers = cepToCalc.replace(/\D/g, '');
+    if (cepNumbers.length !== 8) return;
+
+    setIsCalculatingShipping(true);
+    try {
+      const shipping = await calculateShippingRate(cepNumbers);
+      setShippingFee(shipping.rate || 0);
+      setShippingInfo({ carrier: shipping.carrier || 'Transportadora', days: shipping.deliveryDays || 5 });
+      setIsManuallyCalculated(true);
+      
+      setDelivery(prev => ({ 
+        ...prev, 
+        city: shipping.city || prev.city, 
+        state: shipping.state || prev.state 
+      }));
+
+      const res = await fetch(`https://viacep.com.br/ws/${cepNumbers}/json/`);
+      const data = await res.json();
+      if (!data.erro) {
+        setDelivery(prev => ({ 
+          ...prev, 
+          address: prev.address || data.logradouro || '', 
+          city: data.localidade || prev.city, 
+          state: data.uf || prev.state 
+        }));
+      }
+    } catch (err) { console.error("Erro frete:", err); } finally { setIsCalculatingShipping(false); }
+  }, []);
+
+  const checkCEP = () => handleCalculateShipping(delivery.cep);
+
+  // Redirects
   useEffect(() => {
-    if (user) {
+    if (!authLoading && !user) navigate('/login?redirect=/checkout');
+  }, [user, authLoading, navigate]);
+
+  useEffect(() => {
+    if (!authLoading && items.length === 0 && currentStep < 3) navigate('/cart');
+  }, [items, authLoading, navigate, currentStep]);
+
+  // Sync initial fee
+  useEffect(() => {
+    if (!isManuallyCalculated) {
+      if (totalPrice >= 200 && totalPrice > 0) setShippingFee(0);
+      else setShippingFee(25.9);
+    }
+  }, [totalPrice, isManuallyCalculated]);
+
+  // Profile data
+  useEffect(() => {
+    if (user?.id) {
       const loadProfile = async () => {
         try {
-          const { data, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', user.id)
-            .single();
-
+          const { data, error } = await supabase.from('profiles').select('*').eq('id', user.id).single();
           if (data && !error) {
-            setDelivery(prev => ({
-              ...prev,
-              name: data.full_name || '',
-              phone: data.phone || '',
-              cpf: data.cpf || '',
-              cep: data.cep || '',
-              address: data.address || '',
-              city: data.city || '',
-              state: data.state || ''
+            setDelivery(prev => ({ 
+              ...prev, 
+              name: data.full_name || prev.name, 
+              phone: data.phone || prev.phone, 
+              cpf: data.cpf || prev.cpf, 
+              cep: data.cep || prev.cep, 
+              address: data.address || prev.address, 
+              city: data.city || prev.city, 
+              state: data.state || prev.state 
             }));
+            if (data.cep) handleCalculateShipping(data.cep);
           }
-        } catch (err) {
-          console.error("Erro ao puxar perfil", err);
-        }
+        } catch (err) { console.error(err); }
       };
       loadProfile();
     }
-  }, [user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
-  // ----- MASKS -----
   const handleMask = (e: React.ChangeEvent<HTMLInputElement>, field: string) => {
     let { value } = e.target;
-    if (field === 'cpf') {
-      value = value
-        .replace(/\D/g, '')
-        .replace(/(\d{3})(\d)/, '$1.$2')
-        .replace(/(\d{3})(\d)/, '$1.$2')
-        .replace(/(\d{3})(\d{1,2})/, '$1-$2')
-        .replace(/(-\d{2})\d+?$/, '$1');
-    } else if (field === 'phone') {
-      value = value
-        .replace(/\D/g, '')
-        .replace(/(\d{2})(\d)/, '($1) $2')
-        .replace(/(\d{5})(\d)/, '$1-$2')
-        .replace(/(-\d{4})\d+?$/, '$1');
-    } else if (field === 'cep') {
-      value = value
-        .replace(/\D/g, '')
-        .replace(/(\d{5})(\d)/, '$1-$2')
-        .replace(/(-\d{3})\d+?$/, '$1');
-    } else if (field === 'cardNumber') {
-      value = value
-        .replace(/\D/g, '')
-        .replace(/(\d{4})(?=\d)/g, '$1 ')
-        .substring(0, 19);
-      
-      // Update card flag
+    if (field === 'cpf') value = value.replace(/\D/g, '').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})/, '$1-$2').substring(0, 14);
+    else if (field === 'phone') value = value.replace(/\D/g, '').replace(/(\d{2})(\d)/, '($1) $2').replace(/(\d{5})(\d)/, '$1-$2').substring(0, 15);
+    else if (field === 'cep') value = value.replace(/\D/g, '').replace(/(\d{5})(\d)/, '$1-$2').substring(0, 9);
+    else if (field === 'cardNumber') {
+      value = value.replace(/\D/g, '').replace(/(\d{4})(?=\d)/g, '$1 ').substring(0, 19);
       let flag = '';
-      if (value.startsWith('4')) flag = 'Visa';
-      else if (value.startsWith('5')) flag = 'Mastercard';
-      else if (value.startsWith('6')) flag = 'Elo';
-      else if (value.startsWith('3')) flag = 'Amex';
+      if (value.startsWith('4')) flag = 'Visa'; else if (value.startsWith('5')) flag = 'Mastercard';
       setPayment(p => ({ ...p, cardFlag: flag }));
-    } else if (field === 'cardExpiry') {
-      value = value
-        .replace(/\D/g, '')
-        .replace(/(\d{2})(\d)/, '$1/$2')
-        .replace(/(\/\d{2})\d+?$/, '$1');
-    } else if (field === 'cardCvv') {
-      value = value.replace(/\D/g, '').substring(0, 4);
-    } else if (field === 'cardName') {
-      value = value.toUpperCase();
     }
+    else if (field === 'cardExpiry') value = value.replace(/\D/g, '').replace(/(\d{2})(\d)/, '$1/$2').substring(0, 5);
+    else if (field === 'cardCvv') value = value.replace(/\D/g, '').substring(0, 4);
 
-    if (['cardNumber', 'cardName', 'cardExpiry', 'cardCvv'].includes(field)) {
-      setPayment(p => ({ ...p, [field]: value }));
-    } else {
-      setDelivery(p => ({ ...p, [field]: value }));
-    }
+    if (['cardNumber', 'cardName', 'cardExpiry', 'cardCvv'].includes(field)) setPayment(p => ({ ...p, [field]: value }));
+    else setDelivery(p => ({ ...p, [field]: value }));
   };
 
-  // ----- VIA CEP -----
-  const checkCEP = async () => {
-    const cepNumbers = delivery.cep.replace(/\D/g, '');
-    if (cepNumbers.length === 8) {
-      try {
-        const res = await fetch(`https://viacep.com.br/ws/${cepNumbers}/json/`);
-        const data = await res.json();
-        if (!data.erro) {
-          setDelivery(p => ({
-            ...p,
-            address: data.logradouro || p.address,
-            city: data.localidade || p.city,
-            state: data.uf || p.state
-          }));
-        }
-      } catch (err) {
-        console.error("Erro ao buscar CEP", err);
-      }
-    }
-  };
-
-  // ----- VALIDATIONS -----
   const validateDelivery = () => {
     const errs: Record<string, string> = {};
-    if (!delivery.name.trim()) errs.name = "Nome é obrigatório";
-    if (delivery.cpf.replace(/\D/g, '').length !== 11) errs.cpf = "CPF inválido";
-    if (delivery.phone.replace(/\D/g, '').length < 10) errs.phone = "Telefone inválido";
-    if (delivery.cep.replace(/\D/g, '').length !== 8) errs.cep = "CEP inválido";
-    if (!delivery.address.trim()) errs.address = "Endereço é obrigatório";
-    if (!delivery.number.trim()) errs.number = "Número é obrigatório";
-    if (!delivery.city.trim()) errs.city = "Cidade é obrigatória";
-    if (!delivery.state.trim()) errs.state = "Estado é obrigatório";
-
+    if (!delivery.name.trim()) errs.name = "Obrigatório";
+    if (delivery.cep.replace(/\D/g, '').length !== 8) errs.cep = "Inválido";
     setDeliveryErrors(errs);
     return Object.keys(errs).length === 0;
   };
 
-  const validatePayment = () => {
-    const errs: Record<string, string> = {};
-    if (payment.method === 'credit_card') {
-      if (payment.cardNumber.replace(/\D/g, '').length < 13) errs.cardNumber = "Número de cartão inválido";
-      if (!payment.cardName.trim()) errs.cardName = "Nome impresso é obrigatório";
-      if (payment.cardExpiry.length !== 5) errs.cardExpiry = "Validade inválida (MM/AA)";
-      if (payment.cardCvv.length < 3) errs.cardCvv = "CVV inválido";
-    }
-    setPaymentErrors(errs);
-    return Object.keys(errs).length === 0;
-  };
-
-  // ----- NAVIGATION -----
-  const goNext = async () => {
-    if (currentStep === 1) {
-      if (validateDelivery()) setCurrentStep(2);
-    } else if (currentStep === 2) {
-      if (validatePayment()) {
-        await finishOrder();
-      }
-    }
-  };
-
-  const goBack = () => {
-    if (currentStep > 1) setCurrentStep(currentStep - 1);
-  };
-
-  // ----- SUBMIT -----
   const finishOrder = async () => {
     if (!user) return;
     setIsSubmitting(true);
     setSubmitError(null);
-
     try {
-      console.log('user.id:', user?.id);
-      console.log('dados do pedido:', { subtotal: totalPrice, shipping_fee: shippingFee, total_amount: orderTotal, payment_method: payment.method });
-      console.log('itens do carrinho:', items);
-
-      // 1. Pular upsert de profile (dados são fictícios, evita erro de RLS)
-
-      // 2. Insert Order
-      const fullAddress = `${delivery.address}, ${delivery.number}` + 
-                          (delivery.complement ? ` - ${delivery.complement}` : '') + 
-                          ` - ${delivery.city}/${delivery.state} - CEP: ${delivery.cep}`;
       const orderId = crypto.randomUUID();
-
-      const { error: orderError } = await supabase.from('orders').insert({
-        id: orderId,
-        user_id: user.id,
-        status: 'paid', // Fictício
-        subtotal: totalPrice,
-        shipping_fee: shippingFee,
-        total_amount: orderTotal,
-        shipping_address: fullAddress,
-        payment_method: payment.method,
-        created_at: new Date().toISOString()
+      const { error } = await supabase.from('orders').insert({ 
+        id: orderId, user_id: user.id, status: 'paid', 
+        subtotal: totalPrice, shipping_fee: shippingFee, total_amount: orderTotal, 
+        shipping_address: `${delivery.address}, ${delivery.number}`, 
+        payment_method: payment.method, created_at: new Date().toISOString() 
       });
-      
-      if (orderError) throw orderError;
+      if (error) throw error;
       setCreatedOrderId(orderId);
-
-      // 3. Insert Items
-      const orderItems = items.map(item => ({
-        id: crypto.randomUUID(),
-        order_id: orderId,
-        product_id: item.product.id,
-        quantity: item.quantity,
-        unit_price: item.product.price,
-        created_at: new Date().toISOString()
+      const orderItems = items.map(item => ({ 
+        id: crypto.randomUUID(), order_id: orderId, product_id: item.product.id, 
+        quantity: item.quantity, unit_price: item.product.price, created_at: new Date().toISOString() 
       }));
+      await supabase.from('order_items').insert(orderItems);
+      
+      setFinalSummary({
+        subtotal: totalPrice,
+        shipping: shippingFee,
+        total: orderTotal
+      });
 
-      const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
-      if (itemsError) throw itemsError;
-
-      // 4. Abater do estoque real no banco de dados
-      for (const item of items) {
-        const currentStock = Number(item.product.stock_quantity) || 0;
-        const newStock = Math.max(0, currentStock - item.quantity);
-        
-        const { error: stockError } = await supabase
-          .from('products')
-          .update({ stock_quantity: newStock })
-          .eq('id', item.product.id);
-          
-        if (stockError) {
-          console.error(`Erro ao abater estoque do produto ${item.product.id}`, stockError);
-        }
-      }
-
-      // 5. Success
       clearCart();
       setCurrentStep(3);
-    } catch (err: unknown) {
-      console.error("Erro completo:", JSON.stringify(err));
-      const msg = err instanceof Error 
-        ? err.message 
-        : (err as { message?: string })?.message ?? "Erro desconhecido ao processar pedido.";
-      setSubmitError(msg);
-    } finally {
-      setIsSubmitting(false);
-    }
+    } catch (err: unknown) { setSubmitError(err instanceof Error ? err.message : "Erro"); } finally { setIsSubmitting(false); }
   };
 
-  const formatBRL = (value: number) =>
-    value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  const formatBRL = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-
-  // ====== RENDER =======
-  if (authLoading || (!user && currentStep === 1)) {
-    return (
-      <div className="checkout-page" style={{display: 'flex', justifyContent: 'center', marginTop: '10vh'}}>
-        <Loader2 className="spinning" size={48} color="var(--primary)" />
-      </div>
-    );
-  }
+  if (authLoading || (!user && currentStep === 1)) return <div style={{display: 'flex', justifyContent: 'center', marginTop: '10vh'}}><Loader2 className="spinning" size={48} color="var(--primary)" /></div>;
 
   return (
     <div className="checkout-page fade-in">
       <div className="container">
-        <div className="checkout-header">
-          <h1 className="checkout-title">Checkout Segura</h1>
-        </div>
-
-        {/* Stepper */}
+        <h1 className="checkout-title">Checkout Seguro</h1>
         {currentStep < 3 && (
           <div className="stepper">
-            <div className={`step ${currentStep >= 1 ? 'active' : ''} ${currentStep > 1 ? 'completed' : ''}`}>
-              <div className="step-circle">{currentStep > 1 ? <Check size={20} /> : 1}</div>
-              <span className="step-label">Entrega</span>
-            </div>
-            <div className={`step ${currentStep >= 2 ? 'active' : ''} ${currentStep > 2 ? 'completed' : ''}`}>
-              <div className="step-circle">{currentStep > 2 ? <Check size={20} /> : 2}</div>
-              <span className="step-label">Pagamento</span>
-            </div>
-            <div className={`step ${currentStep >= 3 ? 'active' : ''}`}>
-              <div className="step-circle">3</div>
-              <span className="step-label">Confirmação</span>
-            </div>
+            <div className={`step ${currentStep >= 1 ? 'active' : ''} ${currentStep > 1 ? 'completed' : ''}`}><div className="step-circle">{currentStep > 1 ? <Check size={20} /> : 1}</div><span className="step-label">Entrega</span></div>
+            <div className={`step ${currentStep >= 2 ? 'active' : ''} ${currentStep > 2 ? 'completed' : ''}`}><div className="step-circle">{currentStep > 2 ? <Check size={20} /> : 2}</div><span className="step-label">Pagamento</span></div>
+            <div className={`step ${currentStep >= 3 ? 'active' : ''}`}><div className="step-circle">3</div><span className="step-label">Fim</span></div>
           </div>
         )}
-
-        <div className="checkout-layout">
-          
-          {/* Formulários (Coluna central/esquerda) */}
+        <div className={`checkout-layout ${currentStep === 3 ? 'success-layout' : ''}`}>
           <div className="checkout-form-col">
-            
-            {/* ETAPA 1 - ENTREGA */}
             {currentStep === 1 && (
               <div className="card">
-                <h2 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <MapPin size={24} color="var(--primary)" /> Dados de Entrega
-                </h2>
-                
-                <div className="checkout-form-section">
+                <h2><MapPin size={20} /> Entrega</h2>
+                <div className="form-group"><label>Nome Completo *</label><input type="text" className="form-input" value={delivery.name} onChange={e => handleMask(e, 'name')} />{deliveryErrors.name && <span className="form-error">{deliveryErrors.name}</span>}</div>
+                <div className="form-row">
+                  <div className="form-group"><label>CPF</label><input type="text" className="form-input" value={delivery.cpf} onChange={e => handleMask(e, 'cpf')} /></div>
                   <div className="form-group">
-                    <label>Nome Completo *</label>
-                    <input type="text" className="form-input" value={delivery.name} onChange={e => handleMask(e, 'name')} />
-                    {deliveryErrors.name && <span className="form-error">{deliveryErrors.name}</span>}
-                  </div>
-                  
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>CPF *</label>
-                      <input type="text" className="form-input" placeholder="000.000.000-00" value={delivery.cpf} onChange={e => handleMask(e, 'cpf')} />
-                      {deliveryErrors.cpf && <span className="form-error">{deliveryErrors.cpf}</span>}
-                    </div>
-                    <div className="form-group">
-                      <label>Telefone *</label>
-                      <input type="text" className="form-input" placeholder="(00) 00000-0000" value={delivery.phone} onChange={e => handleMask(e, 'phone')} />
-                      {deliveryErrors.phone && <span className="form-error">{deliveryErrors.phone}</span>}
-                    </div>
-                  </div>
-
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>CEP *</label>
+                    <label>CEP *</label>
+                    <div style={{ position: 'relative' }}>
                       <input type="text" className="form-input" placeholder="00000-000" value={delivery.cep} onChange={e => handleMask(e, 'cep')} onBlur={checkCEP} />
-                      {deliveryErrors.cep && <span className="form-error">{deliveryErrors.cep}</span>}
+                      {isCalculatingShipping && <div style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)' }}><Loader2 size={16} className="spinning" /></div>}
                     </div>
-                    <div className="form-group" style={{ flex: 2 }}>
-                      <label>Endereço / Rua *</label>
-                      <input type="text" className="form-input" value={delivery.address} onChange={e => handleMask(e, 'address')} />
-                      {deliveryErrors.address && <span className="form-error">{deliveryErrors.address}</span>}
-                    </div>
-                  </div>
-
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>Número *</label>
-                      <input type="text" className="form-input" value={delivery.number} onChange={e => handleMask(e, 'number')} />
-                      {deliveryErrors.number && <span className="form-error">{deliveryErrors.number}</span>}
-                    </div>
-                    <div className="form-group" style={{ flex: 2 }}>
-                      <label>Complemento</label>
-                      <input type="text" className="form-input" value={delivery.complement} onChange={e => handleMask(e, 'complement')} />
-                    </div>
-                  </div>
-
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>Cidade *</label>
-                      <input type="text" className="form-input" value={delivery.city} onChange={e => handleMask(e, 'city')} />
-                      {deliveryErrors.city && <span className="form-error">{deliveryErrors.city}</span>}
-                    </div>
-                    <div className="form-group">
-                      <label>Estado *</label>
-                      <input type="text" className="form-input" placeholder="UF" maxLength={2} value={delivery.state} onChange={e => handleMask(e, 'state')} />
-                      {deliveryErrors.state && <span className="form-error">{deliveryErrors.state}</span>}
-                    </div>
+                    {deliveryErrors.cep && <span className="form-error">{deliveryErrors.cep}</span>}
                   </div>
                 </div>
-
-                <div className="checkout-actions">
-                  <button className="btn-secondary" onClick={() => navigate('/cart')}>Voltar ao Carrinho</button>
-                  <button className="btn-primary" onClick={goNext}>Continuar para Pagamento <ArrowRight size={18} style={{marginLeft: '0.5rem'}} /></button>
-                </div>
+                <div className="form-row"><div className="form-group" style={{flex:2}}><label>Rua</label><input type="text" className="form-input" value={delivery.address} onChange={e => handleMask(e, 'address')} /></div><div className="form-group"><label>Nº</label><input type="text" className="form-input" value={delivery.number} onChange={e => handleMask(e, 'number')} /></div></div>
+                <div className="form-row"><div className="form-group"><label>Cidade</label><input type="text" className="form-input" value={delivery.city} onChange={e => handleMask(e, 'city')} /></div><div className="form-group"><label>UF</label><input type="text" className="form-input" value={delivery.state} onChange={e => handleMask(e, 'state')} maxLength={2} /></div></div>
+                <div className="checkout-actions"><button className="btn-primary" onClick={() => { if(validateDelivery()) setCurrentStep(2); }}>Continuar para Pagamento <ArrowRight size={18} /></button></div>
               </div>
             )}
-
-            {/* ETAPA 2 - PAGAMENTO */}
             {currentStep === 2 && (
               <div className="card">
-                <h2 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <CreditCard size={24} color="var(--primary)" /> Método de Pagamento
-                </h2>
-
+                <h2><CreditCard size={20} /> Pagamento</h2>
                 <div className="payment-methods">
-                  <div className={`payment-method-card ${payment.method === 'pix' ? 'selected' : ''}`} onClick={() => setPayment(p => ({ ...p, method: 'pix' }))}>
-                    <QrCode size={32} color={payment.method === 'pix' ? 'var(--primary)' : 'var(--text-muted)'} />
-                    <span style={{ fontWeight: 500 }}>PIX</span>
-                  </div>
-                  <div className={`payment-method-card ${payment.method === 'credit_card' ? 'selected' : ''}`} onClick={() => setPayment(p => ({ ...p, method: 'credit_card' }))}>
-                    <CreditCard size={32} color={payment.method === 'credit_card' ? 'var(--primary)' : 'var(--text-muted)'} />
-                    <span style={{ fontWeight: 500 }}>Cartão de Crédito</span>
-                  </div>
+                  <div className={`payment-method-card ${payment.method === 'pix' ? 'selected' : ''}`} onClick={() => setPayment(p => ({ ...p, method: 'pix' }))}><QrCode size={32} /> <span>PIX</span></div>
+                  <div className={`payment-method-card ${payment.method === 'credit_card' ? 'selected' : ''}`} onClick={() => setPayment(p => ({ ...p, method: 'credit_card' }))}><CreditCard size={32} /> <span>Cartão</span></div>
                 </div>
 
                 {payment.method === 'pix' ? (
-                  <div className="pix-container fade-in">
-                    <h3>Pagamento via PIX</h3>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '0.5rem' }}>
-                      Após o pagamento, seu pedido será confirmado em até 5 minutos.
-                    </p>
-                    <div className="pix-qr">
-                      <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=TechHub-PIX-FICTICIO-${orderTotal}`} alt="QR Code PIX" />
+                  <div className="pix-container">
+                    <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x180&data=Tech-PIX-${orderTotal}`} alt="PIX" />
+                    <div style={{background:'var(--primary-light)', padding:'1rem', borderRadius:'8px', marginTop:'1rem', textAlign:'center', width:'100%'}}>
+                      <strong>Total: {formatBRL(orderTotal)}</strong><br/>
+                      <small>Itens: {formatBRL(totalPrice)} + Frete: {shippingFee === 0 ? 'Grátis' : formatBRL(shippingFee)}</small>
                     </div>
-                    <p style={{ fontWeight: 500 }}>Total a pagar: {formatBRL(orderTotal)}</p>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '1rem' }}>
-                      Chave PIX: techhub@pagamentos.com.br
-                    </p>
                   </div>
                 ) : (
                   <div className="credit-card-container fade-in">
-                    {/* Cartão animado */}
                     <div className={`credit-card-preview ${focusedCvv ? 'flipped' : ''}`}>
                       <div className="cc-front">
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                           <div className="cc-chip"></div>
                           <div style={{ fontWeight: 'bold', fontSize: '1.2rem', fontStyle: 'italic' }}>{payment.cardFlag}</div>
                         </div>
-                        <div className="cc-number">
-                          {payment.cardNumber || '•••• •••• •••• ••••'}
-                        </div>
+                        <div className="cc-number">{payment.cardNumber || '•••• •••• •••• ••••'}</div>
                         <div className="cc-footer">
                           <div className="cc-name">{payment.cardName || 'NOME NO CARTÃO'}</div>
                           <div>{payment.cardExpiry || 'MM/AA'}</div>
@@ -448,130 +242,56 @@ const CheckoutPage = () => {
                       </div>
                     </div>
 
-                    <div className="checkout-form-section">
-                      <div className="form-group">
-                        <label>Número do Cartão</label>
-                        <input type="text" className="form-input" placeholder="0000 0000 0000 0000" value={payment.cardNumber} onChange={e => handleMask(e, 'cardNumber')} onFocus={() => setFocusedCvv(false)} />
-                        {paymentErrors.cardNumber && <span className="form-error">{paymentErrors.cardNumber}</span>}
-                      </div>
-
-                      <div className="form-group">
-                        <label>Nome Impresso no Cartão</label>
-                        <input type="text" className="form-input" placeholder="João S. Silva" value={payment.cardName} onChange={e => handleMask(e, 'cardName')} onFocus={() => setFocusedCvv(false)} />
-                        {paymentErrors.cardName && <span className="form-error">{paymentErrors.cardName}</span>}
-                      </div>
-
+                    <div className="checkout-form-section" style={{width:'100%'}}>
+                      <div className="form-group"><label>Número do Cartão</label><input type="text" className="form-input" placeholder="0000 0000 0000 0000" value={payment.cardNumber} onChange={e => handleMask(e, 'cardNumber')} onFocus={() => setFocusedCvv(false)} /></div>
+                      <div className="form-group"><label>Nome no Cartão</label><input type="text" className="form-input" placeholder="NOME COMO NO CARTÃO" value={payment.cardName} onChange={e => handleMask(e, 'cardName')} onFocus={() => setFocusedCvv(false)} /></div>
                       <div className="form-row">
-                        <div className="form-group">
-                          <label>Validade</label>
-                          <input type="text" className="form-input" placeholder="MM/AA" value={payment.cardExpiry} onChange={e => handleMask(e, 'cardExpiry')} onFocus={() => setFocusedCvv(false)} />
-                          {paymentErrors.cardExpiry && <span className="form-error">{paymentErrors.cardExpiry}</span>}
-                        </div>
-                        <div className="form-group">
-                          <label>CVV</label>
-                          <input type="text" className="form-input" placeholder="000" value={payment.cardCvv} onChange={e => handleMask(e, 'cardCvv')} onFocus={() => setFocusedCvv(true)} onBlur={() => setFocusedCvv(false)} />
-                          {paymentErrors.cardCvv && <span className="form-error">{paymentErrors.cardCvv}</span>}
-                        </div>
+                        <div className="form-group"><label>Validade</label><input type="text" className="form-input" placeholder="MM/AA" value={payment.cardExpiry} onChange={e => handleMask(e, 'cardExpiry')} onFocus={() => setFocusedCvv(false)} /></div>
+                        <div className="form-group"><label>CVV</label><input type="text" className="form-input" placeholder="000" value={payment.cardCvv} onChange={e => handleMask(e, 'cardCvv')} onFocus={() => setFocusedCvv(true)} onBlur={() => setFocusedCvv(false)} /></div>
                       </div>
                     </div>
                   </div>
                 )}
-
-                {submitError && (
-                  <div className="error-message">
-                    <AlertCircle size={20} />
-                    <span>{submitError}</span>
-                  </div>
-                )}
-
+                {submitError && <div className="error-message"><AlertCircle size={16} /> {submitError}</div>}
                 <div className="checkout-actions">
-                  <button className="btn-secondary" onClick={goBack} disabled={isSubmitting}>Voltar</button>
-                  <button className="btn-primary" onClick={goNext} disabled={isSubmitting}>
-                    {isSubmitting ? <Loader2 className="spinning" size={18} /> : 'Confirmar e Finalizar Pedido'}
-                  </button>
+                  <button className="btn-secondary" onClick={() => setCurrentStep(1)}>Voltar</button>
+                  <button className="btn-primary" onClick={finishOrder} disabled={isSubmitting}>{isSubmitting ? <Loader2 className="spinning" size={16} /> : 'Finalizar Pedido'}</button>
                 </div>
               </div>
             )}
-
-            {/* ETAPA 3 - CONFIRMAÇÃO */}
             {currentStep === 3 && (
               <div className="success-container fade-in">
-                <div className="success-icon-wrapper">
-                  <Check size={40} strokeWidth={3} />
-                </div>
-                <h2>Pedido realizado com sucesso! 🎉</h2>
-                <p>Nós recebemos o seu pedido e estamos processando as informações.</p>
-                
-                <div className="order-badge">#{createdOrderId.substring(0, 8)}</div>
-
+                <Check size={64} color="#10b981" />
+                <h2>Pedido Realizado! 🎉</h2>
+                <div className="order-badge">#{createdOrderId.substring(0,8)}</div>
                 <div className="success-details">
-                  <div className="success-details-row">
-                    <span style={{ color: 'var(--text-muted)' }}>Método</span>
-                    <span style={{ fontWeight: 500 }}>{payment.method === 'pix' ? 'PIX' : 'Cartão de Crédito'}</span>
-                  </div>
-                  <div className="success-details-row">
-                    <span style={{ color: 'var(--text-muted)' }}>Total Pago</span>
-                    <span style={{ fontWeight: 500, color: 'var(--primary)' }}>{formatBRL(orderTotal)}</span>
-                  </div>
-                  <div className="success-details-row" style={{ marginTop: '1rem', borderTop: 'none' }}>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', backgroundColor: 'var(--bg-color)', padding: '1rem', borderRadius: 'var(--radius-md)', width: '100%' }}>
-                      <Truck size={20} color="var(--primary)" style={{ flexShrink: 0 }} />
-                      <div>
-                        <p style={{ fontWeight: 500, margin: 0, fontSize: '0.9rem' }}>Entrega prevista em 3-5 dias úteis</p>
-                        <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.8rem', marginTop: '0.2rem' }}>
-                          {delivery.address}, {delivery.number} - {delivery.city}/{delivery.state}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                  <div className="success-details-row"><span>Itens:</span><span>{formatBRL(finalSummary?.subtotal || 0)}</span></div>
+                  <div className="success-details-row"><span>Frete:</span><span>{finalSummary?.shipping === 0 ? 'Grátis' : formatBRL(finalSummary?.shipping || 0)}</span></div>
+                  <div className="success-details-row"><strong>Total Pago:</strong><strong>{formatBRL(finalSummary?.total || 0)}</strong></div>
                 </div>
-
-                <div className="success-actions">
-                  <button className="btn-secondary" onClick={() => navigate('/')}>Ir para Início</button>
-                  <button className="btn-primary" onClick={() => navigate('/products')}><ShoppingBag size={18} style={{marginRight: '0.5rem'}} /> Voltar para a loja</button>
-                </div>
+                {shippingInfo && <p style={{fontSize:'0.9rem', color:'var(--text-muted)', marginBottom:'1.5rem'}}><Truck size={16} style={{verticalAlign:'middle', marginRight:'5px'}} /> Entrega por {shippingInfo.carrier} em {shippingInfo.days} dias.</p>}
+                <button className="btn-primary" onClick={() => navigate('/products')}><ShoppingBag size={18} /> Voltar para Loja</button>
               </div>
             )}
           </div>
-
-          {/* Resumo do Carrinho (Coluna Direita) */}
           <div className="checkout-summary-col">
-            <div className="card">
-              <h3 style={{ marginBottom: '1.5rem', fontWeight: 600 }}>Resumo do Pedido</h3>
-              
-              <div style={{ marginBottom: '1.5rem' }}>
-                {currentStep < 3 && items.map(item => (
-                  <div key={item.product.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.8rem', fontSize: '0.85rem' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)' }}>
-                      {item.quantity}x <span style={{ color: 'var(--text-main)', maxWidth: '170px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.product.name}</span>
-                    </span>
-                    <span>{formatBRL(item.product.price * item.quantity)}</span>
+            {currentStep < 3 && (
+              <div className="card">
+                <h3>Resumo</h3>
+                <div className="summary-line"><span>Subtotal ({totalItems})</span><span>{formatBRL(totalPrice)}</span></div>
+                <div className="summary-line">
+                  <span>Frete</span>
+                  <div style={{textAlign:'right'}}>
+                    {isCalculatingShipping ? <Loader2 size={12} className="spinning" /> : (
+                      <><span style={{color: shippingFee === 0 ? '#10b981' : 'inherit', fontWeight: 600}}>{shippingFee === 0 ? 'Grátis' : formatBRL(shippingFee)}</span>{shippingInfo && <div style={{fontSize:'0.65rem', opacity:0.7}}>{shippingInfo.carrier}</div>}</>
+                    )}
                   </div>
-                ))}
+                </div>
+                <div className="summary-divider" />
+                <div className="summary-total" style={{display:'flex', justifyContent:'space-between', fontSize:'1.1rem', fontWeight:'bold'}}><span>Total</span><span>{formatBRL(orderTotal)}</span></div>
               </div>
-
-              <div className="summary-divider" />
-
-              <div className="summary-line">
-                <span>Subtotal ({totalItems} itens)</span>
-                <span>{formatBRL(totalPrice)}</span>
-              </div>
-              <div className="summary-line">
-                <span>Frete</span>
-                <span className={shippingFee === 0 ? 'shipping-free' : ''} style={{ color: shippingFee === 0 ? '#10b981' : 'inherit' }}>
-                  {shippingFee === 0 ? 'Grátis' : formatBRL(shippingFee)}
-                </span>
-              </div>
-              
-              <div className="summary-divider" />
-              
-              <div className="summary-total">
-                <span>Total</span>
-                <span>{formatBRL(orderTotal)}</span>
-              </div>
-            </div>
+            )}
           </div>
-          
         </div>
       </div>
     </div>
