@@ -143,6 +143,27 @@ const CheckoutPage = () => {
     setIsSubmitting(true);
     setSubmitError(null);
     try {
+      const { error: profileError } = await supabase.from('profiles').update({
+        full_name: delivery.name,
+        cpf: delivery.cpf,
+        phone: delivery.phone,
+        cep: delivery.cep,
+        address: `${delivery.address}, ${delivery.number}`,
+        city: delivery.city,
+        state: delivery.state,
+        payment_preferences: {
+          recent_method: payment.method,
+          recent_card: payment.method === 'credit_card' ? {
+            last4: payment.cardNumber.slice(-4),
+            name: payment.cardName,
+            expiry: payment.cardExpiry,
+            flag: payment.cardFlag
+          } : null
+        }
+      }).eq('id', user.id);
+      
+      if (profileError) console.error("Erro ao atualizar profile", profileError);
+
       const orderId = crypto.randomUUID();
       const { error } = await supabase.from('orders').insert({ 
         id: orderId, user_id: user.id, status: 'paid', 
