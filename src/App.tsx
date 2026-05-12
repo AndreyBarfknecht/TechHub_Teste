@@ -9,6 +9,7 @@ import AdminPage from "./pages/AdminPage";
 import ProductDetailPage from "./pages/ProductDetailPage";
 import CartPage from "./pages/CartPage";
 import CheckoutPage from "./pages/CheckoutPage";
+import ProfilePage from "./pages/ProfilePage";
 import ScrollToTop from "./components/layout/ScrollToTop";
 import { AuthProvider } from "./context/AuthContext";
 import { CartProvider } from "./context/CartContext";
@@ -30,6 +31,7 @@ function AppContent() {
           <Route path="/cart" element={<CartPage />} />
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/profile" element={<ProfilePage />} />
           <Route path="/admin" element={<AdminPage />} />
         </Routes>
       </main>

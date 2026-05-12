@@ -35,9 +35,12 @@ const Navbar = () => {
             <>
               {user.email === 'admin@gmail.com' && (
                 <Link to="/admin" className="icon-btn hidden-mobile" aria-label="Admin" title="Admin">
-                  <User size={24} />
+                  <User size={24} color="var(--primary)" />
                 </Link>
               )}
+              <Link to="/profile" className="icon-btn hidden-mobile" aria-label="Perfil" title="Meu Perfil">
+                <User size={24} />
+              </Link>
               <button className="icon-btn hidden-mobile" aria-label="Logout" onClick={signOut} title="Sair">
                 <LogOut size={24} />
               </button>
