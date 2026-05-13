@@ -33,17 +33,35 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   };
 
   const coverImage = product.image_urls && product.image_urls.length > 0 ? product.image_urls[0] : null;
+  const isOutOfStock = product.stock_quantity <= 0;
 
   return (
-    <Link to={`/product/${product.id}`} className="product-card card" style={{ display: 'block', textDecoration: 'none', color: 'inherit' }}>
+    <Link to={`/product/${product.id}`} className={`product-card card ${isOutOfStock ? 'out-of-stock' : ''}`} style={{ display: 'block', textDecoration: 'none', color: 'inherit', opacity: isOutOfStock ? 0.8 : 1 }}>
       <div
         className="product-image"
         style={{
           backgroundImage: coverImage ? `url(${coverImage})` : 'none',
           backgroundColor: coverImage ? 'transparent' : '#f5f5f5',
+          position: 'relative'
         }}
       >
         {!coverImage && <div className="image-placeholder" />}
+        {isOutOfStock && (
+          <div style={{
+            position: 'absolute',
+            top: '10px',
+            right: '10px',
+            backgroundColor: '#ef4444',
+            color: 'white',
+            padding: '4px 8px',
+            borderRadius: '4px',
+            fontSize: '0.75rem',
+            fontWeight: 'bold',
+            zIndex: 1
+          }}>
+            ESGOTADO
+          </div>
+        )}
       </div>
 
       <div className="product-info">
@@ -58,7 +76,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           <button
             onClick={handleAddToCart}
             className={`btn-add-cart ${isAdded ? 'added' : ''}`}
-            disabled={isAdding}
+            disabled={isAdding || isOutOfStock}
+            style={{
+              backgroundColor: isOutOfStock ? '#ccc' : undefined,
+              cursor: isOutOfStock ? 'not-allowed' : 'pointer'
+            }}
           >
             {isAdding ? '...' : isAdded ? <Check size={18} /> : <ShoppingCart size={18} />}
           </button>

@@ -5,8 +5,9 @@
 // 2. Badge do carrinho agora mostra o número real de itens
 // 3. Botão do carrinho navega para /cart
 
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ShoppingCart, Menu, Search, User, LogOut } from 'lucide-react';
+import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';       // NOVO
 import './Navbar.css';
@@ -14,6 +15,23 @@ import './Navbar.css';
 const Navbar = () => {
   const { user, signOut } = useAuth();
   const { totalItems } = useCart();                        // NOVO
+  const [searchTerm, setSearchTerm] = useState('');
+  const navigate = useNavigate();
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchTerm.trim()) {
+      navigate(`/products?search=${encodeURIComponent(searchTerm.trim())}`);
+    } else {
+      navigate('/products');
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch(e);
+    }
+  };
 
   return (
     <nav className="navbar glass">
@@ -25,10 +43,16 @@ const Navbar = () => {
           </Link>
         </div>
 
-        <div className="nav-search hidden-mobile">
-          <input type="text" placeholder="Search for products..." />
-          <Search className="search-icon" size={20} />
-        </div>
+        <form className="nav-search hidden-mobile" onSubmit={handleSearch}>
+          <input 
+            type="text" 
+            placeholder="Search for products..." 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyDown={handleKeyDown}
+          />
+          <Search className="search-icon" size={20} onClick={handleSearch} style={{ cursor: 'pointer' }} />
+        </form>
 
         <div className="nav-actions">
           {user ? (

@@ -65,13 +65,15 @@ export default function ProductForm({ onProductAdded, editingProduct, onCancelEd
   }, [editingProduct, categories]);
 
   useEffect(() => {
+    let isMounted = true;
     supabase.from('categories').select('*').then(({ data }) => {
-      if (data) {
+      if (data && isMounted) {
         setCategories(data);
         if (data.length > 0 && !editingProduct) setCategoryId(data[0].id);
       }
     });
-  }, []);
+    return () => { isMounted = false; };
+  }, [editingProduct]);
 
   const addSpecRow = () => setSpecs([...specs, { key: '', value: '' }]);
   const updateSpec = (index: number, field: 'key' | 'value', val: string) => {
@@ -106,6 +108,10 @@ export default function ProductForm({ onProductAdded, editingProduct, onCancelEd
       specs.forEach(s => {
         if (s.key.trim() && s.value.trim()) specifications[s.key.trim()] = s.value.trim();
       });
+
+      if (parseInt(stock) < 0) {
+        throw new Error('O estoque não pode ser negativo.');
+      }
 
       const productData = {
         name,
@@ -189,7 +195,7 @@ export default function ProductForm({ onProductAdded, editingProduct, onCancelEd
           </div>
           <div className="admin-form-group">
             <label className="admin-label">Unidades em Stock</label>
-            <input required type="number" step="1" className="admin-input" value={stock} onChange={e => setStock(e.target.value)} />
+            <input required type="number" step="1" min="0" className="admin-input" value={stock} onChange={e => setStock(e.target.value)} />
           </div>
           <div className="admin-form-group">
             <label className="admin-label">Categoria</label>

@@ -13,10 +13,24 @@ const Login = () => {
   const [searchParams] = useSearchParams();
   const redirectPath = searchParams.get('redirect') || '/';
 
+  const validateEmail = (email: string) => {
+    return String(email)
+      .toLowerCase()
+      .match(
+        /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
+      );
+  };
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+
+    if (!validateEmail(email)) {
+      setError('Por favor, insira um e-mail válido (ex: usuario@email.com).');
+      setLoading(false);
+      return;
+    }
 
     try {
       if (isLogin) {
