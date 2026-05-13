@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import type { Product } from '../types/product';
 import ProductCard from '../components/ui/ProductCard';
@@ -7,22 +8,39 @@ import './Products.css'; // Assumindo que existe ou criar se necessário
 const Products = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchParams] = useSearchParams();
+  const searchQuery = searchParams.get('search') || '';
 
   useEffect(() => {
     const fetchProducts = async () => {
-      const { data, error } = await supabase
-        .from('products')
-        .select('*, categories(name)')
-        .order('created_at', { ascending: false });
+      setLoading(true);
+      
+      try {
+        let query = supabase
+          .from('products')
+          .select('*, categories(name)')
+          .order('created_at', { ascending: false });
 
-      if (!error && data) {
-        setProducts(data);
+        if (searchQuery) {
+          query = query.ilike('name', `%${searchQuery}%`);
+        }
+
+        const { data, error } = await query;
+
+        if (error) {
+          console.error("Erro ao buscar produtos:", error);
+        } else if (data) {
+          setProducts(data as Product[]);
+        }
+      } catch (err) {
+        console.error("Erro inesperado:", err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     fetchProducts();
-  }, []);
+  }, [searchQuery]);
 
   if (loading) {
     return (
@@ -50,15 +68,34 @@ const Products = () => {
 
   return (
     <div className="container fade-in" style={{ padding: '4rem 1.5rem', minHeight: '60vh' }}>
-      <h2 style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>Nossos Produtos</h2>
+      <h2 style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>
+        {searchQuery ? `Resultados para "${searchQuery}"` : 'Nossos Produtos'}
+      </h2>
       <p style={{ color: 'var(--text-muted)', marginBottom: '3rem' }}>
-        Explore toda a nossa coleção de produtos premium.
+        {searchQuery 
+          ? `Encontramos ${products.length} ${products.length === 1 ? 'produto' : 'produtos'} correspondentes.`
+          : 'Explore toda a nossa coleção de produtos premium.'}
       </p>
 
       {products.length === 0 ? (
-        <p style={{ textAlign: 'center', color: '#666', fontStyle: 'italic', padding: '4rem 2rem', fontSize: '1.1rem' }}>
-          Nenhum produto cadastrado ainda.
-        </p>
+        <div style={{ textAlign: 'center', padding: '4rem 2rem' }}>
+          <p style={{ color: '#666', fontStyle: 'italic', fontSize: '1.1rem', marginBottom: '1rem' }}>
+            {searchQuery 
+              ? `Nenhum produto encontrado para "${searchQuery}".` 
+              : 'Nenhum produto cadastrado ainda.'}
+          </p>
+          {searchQuery && (
+            <button 
+              onClick={() => {
+                setProducts([]);
+                window.location.href = '/products';
+              }}
+              style={{ background: 'none', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', textDecoration: 'underline' }}
+            >
+              Ver todos os produtos
+            </button>
+          )}
+        </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '2rem' }}>
           {products.map((prod) => (

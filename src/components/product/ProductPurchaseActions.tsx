@@ -60,21 +60,23 @@ export const ProductPurchaseActions: React.FC<ProductPurchaseActionsProps> = ({ 
       <div className="purchase-buttons">
         <button 
           disabled={product.stock_quantity === 0}
-          className="btn-add"
+          className={`btn-add ${product.stock_quantity === 0 ? 'disabled' : ''}`}
           onClick={handleAddToCart}
           type="button"
+          style={{ opacity: product.stock_quantity === 0 ? 0.6 : 1, cursor: product.stock_quantity === 0 ? 'not-allowed' : 'pointer' }}
         >
           <ShoppingCart size={20} />
-          Adicionar ao Carrinho
+          {product.stock_quantity === 0 ? 'Esgotado' : 'Adicionar ao Carrinho'}
         </button>
         <button 
           disabled={product.stock_quantity === 0}
-          className="btn-buy"
+          className={`btn-buy ${product.stock_quantity === 0 ? 'disabled' : ''}`}
           onClick={handleBuyNow}
           type="button"
+          style={{ opacity: product.stock_quantity === 0 ? 0.6 : 1, cursor: product.stock_quantity === 0 ? 'not-allowed' : 'pointer' }}
         >
           <CreditCard size={20} />
-          Comprar Agora
+          {product.stock_quantity === 0 ? 'Esgotado' : 'Comprar Agora'}
         </button>
       </div>
     </div>

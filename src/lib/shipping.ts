@@ -37,13 +37,17 @@ export async function getAddressFromCep(cep: string) {
  */
 export async function calculateShippingRate(cep: string): Promise<ShippingRate> {
   const cleanCep = cep.replace(/\D/g, '');
-  
+
   if (cleanCep.length !== 8) {
-    throw new Error('CEP inválido. Insira 8 dígitos.');
+    throw new Error('CEP deve ter 8 dígitos.');
   }
 
   // Fetch address info first (crucial for city confirmation)
   const addressInfo = await getAddressFromCep(cleanCep);
+  
+  if (!addressInfo) {
+    throw new Error('CEP não encontrado. Verifique os números.');
+  }
 
   try {
     // Attempt to use the Supabase Edge Function
@@ -56,25 +60,26 @@ export async function calculateShippingRate(cep: string): Promise<ShippingRate> 
         rate: data.rate,
         deliveryDays: data.delivery_days || 5,
         carrier: data.carrier || 'Melhor Envios',
-        city: addressInfo?.city || data.city,
-        state: addressInfo?.state || data.state
+        city: addressInfo.city,
+        state: addressInfo.state
       };
     }
-    
-    // Fallback to mock logic
+
+    // Fallback to mock logic ONLY for valid CEPs
     const mock = getMockShippingRate(cleanCep);
     return {
       ...mock,
-      city: addressInfo?.city,
-      state: addressInfo?.state
+      city: addressInfo.city,
+      state: addressInfo.state
     };
 
-  } catch {
+  } catch (err) {
+    console.error('Shipping calculation error:', err);
     const mock = getMockShippingRate(cleanCep);
     return {
       ...mock,
-      city: addressInfo?.city,
-      state: addressInfo?.state
+      city: addressInfo.city,
+      state: addressInfo.state
     };
   }
 }
@@ -85,7 +90,7 @@ export async function calculateShippingRate(cep: string): Promise<ShippingRate> 
  */
 function getMockShippingRate(cep: string): ShippingRate {
   const firstDigit = parseInt(cep[0]);
-  
+
   // Deterministic mock rates based on Brazil's postal regions
   // 0-3: South/Southeast (Cheaper)
   // 4-9: North/Northeast/Midwest (More expensive)

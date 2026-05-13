@@ -185,7 +185,10 @@ export default function ProductDetailPage() {
                 <div className="stock-warning">Apenas {product.stock_quantity} em estoque!</div>
               )}
               {product.stock_quantity === 0 && (
-                <div className="stock-out">Produto Esgotado</div>
+                <div className="stock-out" style={{ color: '#ef4444', fontWeight: 'bold', fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <AlertCircle size={20} />
+                  Produto Esgotado
+                </div>
               )}
             </div>
 

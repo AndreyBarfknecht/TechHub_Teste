@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, CreditCard, Loader2, MapPin, QrCode, ArrowRight, ShoppingBag, Truck, AlertCircle } from 'lucide-react';
+import { Check, CreditCard, Loader2, MapPin, QrCode, ArrowRight, ShoppingBag, Truck, AlertCircle, Barcode } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { supabase } from '../lib/supabase';
@@ -17,12 +17,19 @@ const CheckoutPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [createdOrderId, setCreatedOrderId] = useState<string>('');
-  const [finalSummary, setFinalSummary] = useState<{ subtotal: number; shipping: number; total: number } | null>(null);
+  const [finalSummary, setFinalSummary] = useState<{ 
+    subtotal: number; 
+    shipping: number; 
+    total: number;
+    paymentMethod: string;
+    installments: number;
+  } | null>(null);
 
   const [shippingFee, setShippingFee] = useState<number>(25.9);
   const [shippingInfo, setShippingInfo] = useState<{ carrier: string; days: number } | null>(null);
   const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
   const [isManuallyCalculated, setIsManuallyCalculated] = useState(false);
+  
   const orderTotal = totalPrice + shippingFee;
 
   const [delivery, setDelivery] = useState({
@@ -31,8 +38,8 @@ const CheckoutPage = () => {
   const [deliveryErrors, setDeliveryErrors] = useState<Record<string, string>>({});
 
   const [payment, setPayment] = useState({
-    method: 'pix' as 'pix' | 'credit_card',
-    cardNumber: '', cardName: '', cardExpiry: '', cardCvv: '', cardFlag: ''
+    method: '' as 'pix' | 'credit_card' | 'boleto' | '',
+    cardNumber: '', cardName: '', cardExpiry: '', cardCvv: '', cardFlag: '', installments: 1
   });
   const [focusedCvv, setFocusedCvv] = useState(false);
 
@@ -127,19 +134,48 @@ const CheckoutPage = () => {
     else if (field === 'cardCvv') value = value.replace(/\D/g, '').substring(0, 4);
 
     if (['cardNumber', 'cardName', 'cardExpiry', 'cardCvv'].includes(field)) setPayment(p => ({ ...p, [field]: value }));
+    else if (field === 'installments') setPayment(p => ({ ...p, installments: parseInt(value) }));
     else setDelivery(p => ({ ...p, [field]: value }));
   };
 
   const validateDelivery = () => {
     const errs: Record<string, string> = {};
-    if (!delivery.name.trim()) errs.name = "Obrigatório";
-    if (delivery.cep.replace(/\D/g, '').length !== 8) errs.cep = "Inválido";
+    if (!delivery.name.trim()) errs.name = "Nome é obrigatório";
+    if (delivery.cpf.replace(/\D/g, '').length !== 11) errs.cpf = "CPF inválido";
+    if (delivery.phone.replace(/\D/g, '').length < 10) errs.phone = "Telefone inválido";
+    if (delivery.cep.replace(/\D/g, '').length !== 8) errs.cep = "CEP inválido";
+    if (!delivery.address.trim()) errs.address = "Endereço é obrigatório";
+    if (!delivery.number.trim()) errs.number = "Nº obrigatório";
+    if (!delivery.city.trim()) errs.city = "Cidade obrigatória";
+    if (!delivery.state.trim()) errs.state = "UF obrigatória";
+    
     setDeliveryErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
+  const [paymentErrors, setPaymentErrors] = useState<Record<string, string>>({});
+  
+  const validatePayment = () => {
+    if (payment.method === 'pix' || payment.method === 'boleto') return true;
+    
+    const errs: Record<string, string> = {};
+    if (payment.cardNumber.replace(/\D/g, '').length < 16) errs.cardNumber = "Cartão inválido";
+    if (!payment.cardName.trim()) errs.cardName = "Nome é obrigatório";
+    if (!payment.cardExpiry.match(/^\d{2}\/\d{2}$/)) errs.cardExpiry = "Validade inválida (MM/AA)";
+    if (payment.cardCvv.length < 3) errs.cardCvv = "CVV inválido";
+    
+    setPaymentErrors(errs);
     return Object.keys(errs).length === 0;
   };
 
   const finishOrder = async () => {
     if (!user) return;
+    if (!payment.method) {
+      setSubmitError("Selecione um método de pagamento");
+      return;
+    }
+    if (!validatePayment()) return;
+    
     setIsSubmitting(true);
     setSubmitError(null);
     try {
@@ -158,10 +194,27 @@ const CheckoutPage = () => {
       }));
       await supabase.from('order_items').insert(orderItems);
       
+      // REDUÇÃO DE ESTOQUE
+      for (const item of items) {
+        const newStock = item.product.stock_quantity - item.quantity;
+        await supabase
+          .from('products')
+          .update({ stock_quantity: Math.max(0, newStock) })
+          .eq('id', item.product.id);
+      }
+      
+      const methodLabels: Record<string, string> = {
+        pix: 'PIX',
+        credit_card: 'Cartão de Crédito',
+        boleto: 'Boleto Bancário'
+      };
+
       setFinalSummary({
         subtotal: totalPrice,
         shipping: shippingFee,
-        total: orderTotal
+        total: orderTotal,
+        paymentMethod: methodLabels[payment.method] || 'Desconhecido',
+        installments: payment.method === 'credit_card' ? payment.installments : 1
       });
 
       clearCart();
@@ -189,40 +242,85 @@ const CheckoutPage = () => {
             {currentStep === 1 && (
               <div className="card">
                 <h2><MapPin size={20} /> Entrega</h2>
-                <div className="form-group"><label>Nome Completo *</label><input type="text" className="form-input" value={delivery.name} onChange={e => handleMask(e, 'name')} />{deliveryErrors.name && <span className="form-error">{deliveryErrors.name}</span>}</div>
+                <div className="form-group"><label>Nome Completo *</label><input type="text" className={`form-input ${deliveryErrors.name ? 'input-error' : ''}`} value={delivery.name} onChange={e => handleMask(e, 'name')} />{deliveryErrors.name && <span className="form-error">{deliveryErrors.name}</span>}</div>
                 <div className="form-row">
-                  <div className="form-group"><label>CPF</label><input type="text" className="form-input" value={delivery.cpf} onChange={e => handleMask(e, 'cpf')} /></div>
+                  <div className="form-group"><label>CPF *</label><input type="text" className={`form-input ${deliveryErrors.cpf ? 'input-error' : ''}`} value={delivery.cpf} onChange={e => handleMask(e, 'cpf')} />{deliveryErrors.cpf && <span className="form-error">{deliveryErrors.cpf}</span>}</div>
                   <div className="form-group">
                     <label>CEP *</label>
                     <div style={{ position: 'relative' }}>
-                      <input type="text" className="form-input" placeholder="00000-000" value={delivery.cep} onChange={e => handleMask(e, 'cep')} onBlur={checkCEP} />
+                      <input type="text" className={`form-input ${deliveryErrors.cep ? 'input-error' : ''}`} placeholder="00000-000" value={delivery.cep} onChange={e => handleMask(e, 'cep')} onBlur={checkCEP} />
                       {isCalculatingShipping && <div style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)' }}><Loader2 size={16} className="spinning" /></div>}
                     </div>
                     {deliveryErrors.cep && <span className="form-error">{deliveryErrors.cep}</span>}
                   </div>
                 </div>
-                <div className="form-row"><div className="form-group" style={{flex:2}}><label>Rua</label><input type="text" className="form-input" value={delivery.address} onChange={e => handleMask(e, 'address')} /></div><div className="form-group"><label>Nº</label><input type="text" className="form-input" value={delivery.number} onChange={e => handleMask(e, 'number')} /></div></div>
-                <div className="form-row"><div className="form-group"><label>Cidade</label><input type="text" className="form-input" value={delivery.city} onChange={e => handleMask(e, 'city')} /></div><div className="form-group"><label>UF</label><input type="text" className="form-input" value={delivery.state} onChange={e => handleMask(e, 'state')} maxLength={2} /></div></div>
+                <div className="form-row">
+                  <div className="form-group" style={{flex:2}}><label>Rua *</label><input type="text" className={`form-input ${deliveryErrors.address ? 'input-error' : ''}`} value={delivery.address} onChange={e => handleMask(e, 'address')} />{deliveryErrors.address && <span className="form-error">{deliveryErrors.address}</span>}</div>
+                  <div className="form-group"><label>Nº *</label><input type="text" className={`form-input ${deliveryErrors.number ? 'input-error' : ''}`} value={delivery.number} onChange={e => handleMask(e, 'number')} />{deliveryErrors.number && <span className="form-error">{deliveryErrors.number}</span>}</div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group"><label>Cidade *</label><input type="text" className={`form-input ${deliveryErrors.city ? 'input-error' : ''}`} value={delivery.city} onChange={e => handleMask(e, 'city')} />{deliveryErrors.city && <span className="form-error">{deliveryErrors.city}</span>}</div>
+                  <div className="form-group"><label>UF *</label><input type="text" className={`form-input ${deliveryErrors.state ? 'input-error' : ''}`} value={delivery.state} onChange={e => handleMask(e, 'state')} maxLength={2} />{deliveryErrors.state && <span className="form-error">{deliveryErrors.state}</span>}</div>
+                </div>
+                <div className="form-group"><label>Telefone *</label><input type="text" className={`form-input ${deliveryErrors.phone ? 'input-error' : ''}`} value={delivery.phone} onChange={e => handleMask(e, 'phone')} />{deliveryErrors.phone && <span className="form-error">{deliveryErrors.phone}</span>}</div>
                 <div className="checkout-actions"><button className="btn-primary" onClick={() => { if(validateDelivery()) setCurrentStep(2); }}>Continuar para Pagamento <ArrowRight size={18} /></button></div>
               </div>
             )}
             {currentStep === 2 && (
               <div className="card">
                 <h2><CreditCard size={20} /> Pagamento</h2>
+                <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>Escolha como deseja pagar o seu pedido:</p>
                 <div className="payment-methods">
-                  <div className={`payment-method-card ${payment.method === 'pix' ? 'selected' : ''}`} onClick={() => setPayment(p => ({ ...p, method: 'pix' }))}><QrCode size={32} /> <span>PIX</span></div>
-                  <div className={`payment-method-card ${payment.method === 'credit_card' ? 'selected' : ''}`} onClick={() => setPayment(p => ({ ...p, method: 'credit_card' }))}><CreditCard size={32} /> <span>Cartão</span></div>
+                  <div className={`payment-method-card ${payment.method === 'pix' ? 'selected' : ''}`} onClick={() => { setPayment(p => ({ ...p, method: 'pix' })); setPaymentErrors({}); setSubmitError(null); }}><QrCode size={32} /> <span>PIX</span></div>
+                  <div className={`payment-method-card ${payment.method === 'credit_card' ? 'selected' : ''}`} onClick={() => { setPayment(p => ({ ...p, method: 'credit_card' })); setPaymentErrors({}); setSubmitError(null); }}><CreditCard size={32} /> <span>Cartão</span></div>
+                  <div className={`payment-method-card ${payment.method === 'boleto' ? 'selected' : ''}`} onClick={() => { setPayment(p => ({ ...p, method: 'boleto' })); setPaymentErrors({}); setSubmitError(null); }}><Barcode size={32} /> <span>Boleto</span></div>
                 </div>
 
-                {payment.method === 'pix' ? (
-                  <div className="pix-container">
+                {!payment.method && (
+                  <div style={{ textAlign: 'center', padding: '3rem 1rem', border: '2px dashed #eee', borderRadius: '12px', marginTop: '1rem' }}>
+                    <p style={{ color: '#999' }}>Aguardando seleção do método...</p>
+                  </div>
+                )}
+
+                {payment.method === 'pix' && (
+                  <div className="pix-container fade-in">
                     <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x180&data=Tech-PIX-${orderTotal}`} alt="PIX" />
                     <div style={{background:'var(--primary-light)', padding:'1rem', borderRadius:'8px', marginTop:'1rem', textAlign:'center', width:'100%'}}>
                       <strong>Total: {formatBRL(orderTotal)}</strong><br/>
                       <small>Itens: {formatBRL(totalPrice)} + Frete: {shippingFee === 0 ? 'Grátis' : formatBRL(shippingFee)}</small>
                     </div>
+                    <p style={{ fontSize: '0.8rem', color: '#666', marginTop: '1rem', textAlign: 'center' }}>
+                      O QR Code acima é uma simulação. Após o pagamento, o pedido será aprovado automaticamente.
+                    </p>
                   </div>
-                ) : (
+                )}
+
+                {payment.method === 'boleto' && (
+                  <div className="pix-container fade-in">
+                    <div style={{ border: '2px solid #eee', padding: '1.5rem', borderRadius: '12px', width: '100%', textAlign: 'center' }}>
+                      <Barcode size={64} style={{ marginBottom: '1rem', opacity: 0.7 }} />
+                      <div style={{ background: '#f9f9f9', padding: '1rem', borderRadius: '6px', fontFamily: 'monospace', fontSize: '0.9rem', marginBottom: '1rem', wordBreak: 'break-all' }}>
+                        34191.79001 01043.510047 91020.150008 9 950200000{Math.floor(orderTotal * 100)}
+                      </div>
+                      <button 
+                        className="btn-secondary" 
+                        style={{ width: '100%', marginBottom: '1rem' }}
+                        onClick={() => alert('Código de barras copiado!')}
+                      >
+                        Copiar Código de Barras
+                      </button>
+                    </div>
+                    <div style={{background:'var(--primary-light)', padding:'1rem', borderRadius:'8px', marginTop:'1rem', textAlign:'center', width:'100%'}}>
+                      <strong>Total: {formatBRL(orderTotal)}</strong><br/>
+                      <small>Vencimento: em 3 dias úteis</small>
+                    </div>
+                    <p style={{ fontSize: '0.8rem', color: '#666', marginTop: '1rem', textAlign: 'center' }}>
+                      O boleto será gerado após a finalização do pedido. O prazo de compensação é de até 72 horas.
+                    </p>
+                  </div>
+                )}
+
+                {payment.method === 'credit_card' && (
                   <div className="credit-card-container fade-in">
                     <div className={`credit-card-preview ${focusedCvv ? 'flipped' : ''}`}>
                       <div className="cc-front">
@@ -243,11 +341,33 @@ const CheckoutPage = () => {
                     </div>
 
                     <div className="checkout-form-section" style={{width:'100%'}}>
-                      <div className="form-group"><label>Número do Cartão</label><input type="text" className="form-input" placeholder="0000 0000 0000 0000" value={payment.cardNumber} onChange={e => handleMask(e, 'cardNumber')} onFocus={() => setFocusedCvv(false)} /></div>
-                      <div className="form-group"><label>Nome no Cartão</label><input type="text" className="form-input" placeholder="NOME COMO NO CARTÃO" value={payment.cardName} onChange={e => handleMask(e, 'cardName')} onFocus={() => setFocusedCvv(false)} /></div>
+                      <div className="form-group">
+                        <label>Número do Cartão *</label>
+                        <input type="text" className={`form-input ${paymentErrors.cardNumber ? 'input-error' : ''}`} placeholder="0000 0000 0000 0000" value={payment.cardNumber} onChange={e => handleMask(e, 'cardNumber')} onFocus={() => setFocusedCvv(false)} />
+                        {paymentErrors.cardNumber && <span className="form-error">{paymentErrors.cardNumber}</span>}
+                      </div>
+                      <div className="form-group">
+                        <label>Nome no Cartão *</label>
+                        <input type="text" className={`form-input ${paymentErrors.cardName ? 'input-error' : ''}`} placeholder="NOME COMO NO CARTÃO" value={payment.cardName} onChange={e => handleMask(e, 'cardName')} onFocus={() => setFocusedCvv(false)} />
+                        {paymentErrors.cardName && <span className="form-error">{paymentErrors.cardName}</span>}
+                      </div>
                       <div className="form-row">
-                        <div className="form-group"><label>Validade</label><input type="text" className="form-input" placeholder="MM/AA" value={payment.cardExpiry} onChange={e => handleMask(e, 'cardExpiry')} onFocus={() => setFocusedCvv(false)} /></div>
-                        <div className="form-group"><label>CVV</label><input type="text" className="form-input" placeholder="000" value={payment.cardCvv} onChange={e => handleMask(e, 'cardCvv')} onFocus={() => setFocusedCvv(true)} onBlur={() => setFocusedCvv(false)} /></div>
+                        <div className="form-group"><label>Validade *</label><input type="text" className={`form-input ${paymentErrors.cardExpiry ? 'input-error' : ''}`} placeholder="MM/AA" value={payment.cardExpiry} onChange={e => handleMask(e, 'cardExpiry')} onFocus={() => setFocusedCvv(false)} />{paymentErrors.cardExpiry && <span className="form-error">{paymentErrors.cardExpiry}</span>}</div>
+                        <div className="form-group"><label>CVV *</label><input type="text" className={`form-input ${paymentErrors.cardCvv ? 'input-error' : ''}`} placeholder="000" value={payment.cardCvv} onChange={e => handleMask(e, 'cardCvv')} onFocus={() => setFocusedCvv(true)} onBlur={() => setFocusedCvv(false)} />{paymentErrors.cardCvv && <span className="form-error">{paymentErrors.cardCvv}</span>}</div>
+                      </div>
+                      <div className="form-group">
+                        <label>Parcelamento *</label>
+                        <select 
+                          className="form-input" 
+                          value={payment.installments} 
+                          onChange={e => handleMask(e as unknown as React.ChangeEvent<HTMLInputElement>, 'installments')}
+                        >
+                          {[...Array(12)].map((_, i) => (
+                            <option key={i + 1} value={i + 1}>
+                              {i + 1}x de {formatBRL(orderTotal / (i + 1))} {i === 0 ? '(À vista)' : 'sem juros'}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                     </div>
                   </div>
@@ -268,6 +388,17 @@ const CheckoutPage = () => {
                   <div className="success-details-row"><span>Itens:</span><span>{formatBRL(finalSummary?.subtotal || 0)}</span></div>
                   <div className="success-details-row"><span>Frete:</span><span>{finalSummary?.shipping === 0 ? 'Grátis' : formatBRL(finalSummary?.shipping || 0)}</span></div>
                   <div className="success-details-row"><strong>Total Pago:</strong><strong>{formatBRL(finalSummary?.total || 0)}</strong></div>
+                  <div className="summary-divider" style={{ margin: '1rem 0' }} />
+                  <div className="success-details-row">
+                    <span>Forma de Pagamento:</span>
+                    <span>{finalSummary?.paymentMethod}</span>
+                  </div>
+                  {finalSummary?.paymentMethod === 'Cartão de Crédito' && (
+                    <div className="success-details-row">
+                      <span>Parcelamento:</span>
+                      <span>{finalSummary.installments}x de {formatBRL(finalSummary.total / finalSummary.installments)}</span>
+                    </div>
+                  )}
                 </div>
                 {shippingInfo && <p style={{fontSize:'0.9rem', color:'var(--text-muted)', marginBottom:'1.5rem'}}><Truck size={16} style={{verticalAlign:'middle', marginRight:'5px'}} /> Entrega por {shippingInfo.carrier} em {shippingInfo.days} dias.</p>}
                 <button className="btn-primary" onClick={() => navigate('/products')}><ShoppingBag size={18} /> Voltar para Loja</button>
@@ -279,6 +410,7 @@ const CheckoutPage = () => {
               <div className="card">
                 <h3>Resumo</h3>
                 <div className="summary-line"><span>Subtotal ({totalItems})</span><span>{formatBRL(totalPrice)}</span></div>
+                
                 <div className="summary-line">
                   <span>Frete</span>
                   <div style={{textAlign:'right'}}>

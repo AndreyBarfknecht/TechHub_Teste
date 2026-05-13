@@ -2,6 +2,7 @@
 // Esse arquivo cria o "estado global" do carrinho.
 // Pensa nele como um armário que qualquer tela do app pode abrir e usar.
 
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useReducer, useEffect } from 'react';
 import type { Product } from '../types/product';
 
