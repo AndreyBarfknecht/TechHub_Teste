@@ -1,14 +1,15 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom"; // Importado para navegação
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import ProductForm from "../components/admin/ProductForm";
 import ProductList from "../components/admin/ProductList";
 import type { Product } from "../types/product";
 import type { Session } from '@supabase/supabase-js';
-import { LogOut, LayoutDashboard, ShieldCheck, Plus, X, ExternalLink } from "lucide-react";
+import { LogOut, LayoutDashboard, ShieldCheck, Plus, X, ExternalLink, ArrowLeft } from "lucide-react";
 import "./Admin.css";
 
 export default function AdminPage() {
+  const navigate = useNavigate();
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState("");
@@ -148,7 +149,12 @@ export default function AdminPage() {
             </h1>
             <p>Controle o inventário e os produtos da sua loja.</p>
           </div>
-          <div style={{ display: 'flex', gap: '1rem' }}>
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            <button onClick={() => navigate('/')} className="btn-outline-admin">
+              <ArrowLeft size={16} />
+              <span className="desktop-text">Voltar para a Loja</span>
+              <span className="mobile-text">Loja</span>
+            </button>
             <button onClick={handleLogout} className="btn-logout">
               <LogOut size={16} />
               Sair

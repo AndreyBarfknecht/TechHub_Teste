@@ -1,4 +1,3 @@
-
 // src/components/layout/Navbar.tsx
 // MUDANÇAS FEITAS NESSE ARQUIVO:
 // 1. Importado useCart
@@ -6,7 +5,7 @@
 // 3. Botão do carrinho navega para /cart
 
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Menu, Search, User, LogOut } from 'lucide-react';
+import { ShoppingCart, Menu, Search, User, UserCog, LogOut } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';       // NOVO
@@ -44,9 +43,9 @@ const Navbar = () => {
         </div>
 
         <form className="nav-search hidden-mobile" onSubmit={handleSearch}>
-          <input 
-            type="text" 
-            placeholder="Search for products..." 
+          <input
+            type="text"
+            placeholder="Search for products..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -59,7 +58,7 @@ const Navbar = () => {
             <>
               {user.email === 'admin@gmail.com' && (
                 <Link to="/admin" className="icon-btn hidden-mobile" aria-label="Admin" title="Admin">
-                  <User size={24} color="var(--primary)" />
+                  <UserCog size={24} color="var(--text-main)" />
                 </Link>
               )}
               <Link to="/profile" className="icon-btn hidden-mobile" aria-label="Perfil" title="Meu Perfil">

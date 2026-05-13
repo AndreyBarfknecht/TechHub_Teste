@@ -22,7 +22,7 @@ function AppContent() {
     <div className="App fade-in">
       <ScrollToTop />
       {!isAdminRoute && <AnnouncementBar />}
-      {!isAdminRoute && <Navbar />}
+      <Navbar />
       <main>
         <Routes>
           <Route path="/" element={<Home />} />
