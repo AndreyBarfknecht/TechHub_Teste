@@ -3,6 +3,7 @@
 .admin-layout {
   background-color: #f8fafc;
   min-height: 100vh;
+  text-align: left;
 }
 
 /* Admin Login */
@@ -50,11 +51,14 @@
 
 .admin-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
-  align-items: flex-end;
+  align-items: center;
+  gap: 1.5rem;
   margin-bottom: 2.5rem;
   padding-bottom: 1.5rem;
   border-bottom: 1px solid var(--border);
+  min-height: 80px;
 }
 
 .admin-header h1 {
@@ -85,6 +89,30 @@
   background: #f1f5f9;
   color: var(--text-main);
 }
+
+.btn-outline-admin {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--primary-light);
+  background: var(--surface);
+  color: var(--primary);
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all var(--transition);
+}
+
+.btn-outline-admin:hover {
+  background: var(--primary-light);
+  border-color: var(--primary);
+}
+
+.mobile-text {
+  display: none;
+}
+
 
 /* Admin Alerts */
 .admin-alert {
@@ -406,4 +434,13 @@
   .item-actions {
     justify-content: flex-end;
   }
+  
+  .desktop-text {
+    display: none;
+  }
+  
+  .mobile-text {
+    display: inline;
+  }
 }
+
