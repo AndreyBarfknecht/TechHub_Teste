@@ -186,7 +186,7 @@ const OrdersPage = () => {
               key={order.id} 
               className="card" 
               style={{ padding: 0, overflow: 'hidden' }}
-              ref={el => orderRefs.current[order.id] = el}
+              ref={el => { orderRefs.current[order.id] = el; }}
             >
               <div 
                 onClick={() => toggleExpand(order.id)}

@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { Save, Loader2, X } from 'lucide-react';
 import type { Address, ViaCepResponse, ServiceResponse } from '../../types/profile';
 
+type AddressData = Omit<Address, 'id' | 'user_id' | 'created_at' | 'updated_at'> | Partial<Address>;
+
 interface AddressFormProps {
   initialData?: Address | null;
-  onSave: (data: Omit<Address, 'id' | 'user_id' | 'created_at' | 'updated_at'> | Partial<Address>) => Promise<ServiceResponse>;
+  onSave: (data: AddressData) => Promise<ServiceResponse>;
   onCancel: () => void;
   fetchCep: (cep: string) => Promise<ViaCepResponse | null>;
 }

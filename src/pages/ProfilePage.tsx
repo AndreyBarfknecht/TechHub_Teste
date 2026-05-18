@@ -122,7 +122,7 @@ const ProfilePage = () => {
                 {showAddressForm && (
                   <AddressForm 
                     initialData={editingAddress}
-                    onSave={editingAddress ? (data) => updateAddress(editingAddress.id, data) : addAddress}
+                    onSave={editingAddress ? (data) => updateAddress(editingAddress.id, data) : (addAddress as (data: any) => Promise<any>)}
                     onCancel={() => { setShowAddressForm(false); setEditingAddress(null); }}
                     fetchCep={fetchCep}
                   />
