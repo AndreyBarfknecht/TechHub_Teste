@@ -35,7 +35,9 @@ export default function PersonalInfoForm({ profile, onSave }: PersonalInfoFormPr
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let { name, value } = e.target;
+    const { name } = e.target;
+    let { value } = e.target;
+    if (name === 'full_name') value = value.replace(/[0-9]/g, '');
     if (name === 'cpf') value = formatCPF(value);
     if (name === 'phone') value = formatPhone(value);
     setFormData({ ...formData, [name]: value });

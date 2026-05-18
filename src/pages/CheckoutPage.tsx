@@ -121,6 +121,7 @@ const CheckoutPage = () => {
 
   const handleMask = (e: React.ChangeEvent<HTMLInputElement>, field: string) => {
     let { value } = e.target;
+    if (field === 'name' || field === 'cardName') value = value.replace(/[0-9]/g, '');
     if (field === 'cpf') value = value.replace(/\D/g, '').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})/, '$1-$2').substring(0, 14);
     else if (field === 'phone') value = value.replace(/\D/g, '').replace(/(\d{2})(\d)/, '($1) $2').replace(/(\d{5})(\d)/, '$1-$2').substring(0, 15);
     else if (field === 'cep') value = value.replace(/\D/g, '').replace(/(\d{5})(\d)/, '$1-$2').substring(0, 9);
