@@ -82,7 +82,10 @@ const Login = () => {
                 type="text"
                 placeholder="Seu nome"
                 value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
+                onChange={(e) => {
+                  const sanitizedValue = e.target.value.replace(/[0-9]/g, '');
+                  setFullName(sanitizedValue);
+                }}
                 required={!isLogin}
                 style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid #ddd' }}
               />
