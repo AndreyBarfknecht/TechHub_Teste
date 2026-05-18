@@ -28,9 +28,42 @@ export interface Address {
   updated_at?: string;
 }
 
+export interface ViaCepResponse {
+  logradouro?: string;
+  bairro?: string;
+  localidade?: string;
+  uf?: string;
+  erro?: boolean;
+}
+
+export interface ServiceResponse {
+  error: string | null;
+}
+
 export interface OrderSummary {
   id: string;
-  status: 'pending' | 'paid' | 'shipped' | 'delivered' | 'canceled';
+  status: 'pending' | 'paid' | 'shipped' | 'out_for_delivery' | 'delivered' | 'canceled';
   total_amount: number;
   created_at: string;
+}
+
+export interface OrderItem {
+  id: string;
+  order_id: string;
+  product_id: string;
+  quantity: number;
+  unit_price: number;
+  product?: {
+    name: string;
+    image_urls: string[];
+  };
+}
+
+export interface OrderDetail extends OrderSummary {
+  user_id: string;
+  subtotal: number;
+  shipping_fee: number;
+  shipping_address: string;
+  payment_method: string;
+  order_items: OrderItem[];
 }

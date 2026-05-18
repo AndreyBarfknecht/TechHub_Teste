@@ -41,7 +41,7 @@ CREATE TABLE public.products (
 CREATE TABLE public.orders (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     user_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
-    status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'paid', 'shipped', 'delivered', 'canceled')),
+    status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'paid', 'shipped', 'out_for_delivery', 'delivered', 'canceled')),
     subtotal DECIMAL(10, 2) NOT NULL,
     shipping_fee DECIMAL(10, 2) DEFAULT 0 NOT NULL,
     total_amount DECIMAL(10, 2) NOT NULL,

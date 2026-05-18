@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { Save, Loader2, X } from 'lucide-react';
-import type { Address } from '../../types/profile';
+import type { Address, ViaCepResponse, ServiceResponse } from '../../types/profile';
 
 interface AddressFormProps {
   initialData?: Address | null;
-  onSave: (data: any) => Promise<{error: any}>;
+  onSave: (data: Omit<Address, 'id' | 'user_id' | 'created_at' | 'updated_at'> | Partial<Address>) => Promise<ServiceResponse>;
   onCancel: () => void;
-  fetchCep: (cep: string) => Promise<any>;
+  fetchCep: (cep: string) => Promise<ViaCepResponse | null>;
 }
 
 export default function AddressForm({ initialData, onSave, onCancel, fetchCep }: AddressFormProps) {
@@ -26,13 +26,11 @@ export default function AddressForm({ initialData, onSave, onCancel, fetchCep }:
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
-    // Checkbox doesn't exist on HTMLSelectElement but narrowing happens
     const val = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
     setFormData(prev => ({ ...prev, [name]: val }));
   };
 
   const handleCepBlur = async () => {
-    // Only search if length is exactly 8 (without hyphen) or 9 (with hyphen)
     const cleanCep = formData.zip_code.replace(/\D/g, '');
     if (cleanCep.length === 8) {
       setLoadingCep(true);

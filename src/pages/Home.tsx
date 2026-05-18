@@ -24,7 +24,7 @@ const Home = () => {
         </div>
         <div className="categories-grid">
           {loading ? (
-            Array(3).fill(0).map((_, i) => (
+            Array(4).fill(0).map((_, i) => (
               <SkeletonCard key={`skeleton-${i}`} />
             ))
           ) : trendingProducts.length > 0 ? (

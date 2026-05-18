@@ -10,6 +10,7 @@ const Products = () => {
   const [loading, setLoading] = useState(true);
   const [searchParams] = useSearchParams();
   const searchQuery = searchParams.get('search') || '';
+  const categoryQuery = searchParams.get('category') || '';
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -18,11 +19,15 @@ const Products = () => {
       try {
         let query = supabase
           .from('products')
-          .select('*, categories(name)')
+          .select('*, categories!inner(name)')
           .order('created_at', { ascending: false });
 
         if (searchQuery) {
           query = query.ilike('name', `%${searchQuery}%`);
+        }
+
+        if (categoryQuery) {
+          query = query.eq('categories.name', categoryQuery);
         }
 
         const { data, error } = await query;
@@ -40,7 +45,7 @@ const Products = () => {
     };
 
     fetchProducts();
-  }, [searchQuery]);
+  }, [searchQuery, categoryQuery]);
 
   if (loading) {
     return (
@@ -69,10 +74,10 @@ const Products = () => {
   return (
     <div className="container fade-in" style={{ padding: '4rem 1.5rem', minHeight: '60vh' }}>
       <h2 style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>
-        {searchQuery ? `Resultados para "${searchQuery}"` : 'Nossos Produtos'}
+        {searchQuery ? `Resultados para "${searchQuery}"` : categoryQuery ? `Categoria: ${categoryQuery}` : 'Nossos Produtos'}
       </h2>
       <p style={{ color: 'var(--text-muted)', marginBottom: '3rem' }}>
-        {searchQuery 
+        {searchQuery || categoryQuery 
           ? `Encontramos ${products.length} ${products.length === 1 ? 'produto' : 'produtos'} correspondentes.`
           : 'Explore toda a nossa coleção de produtos premium.'}
       </p>
@@ -82,9 +87,11 @@ const Products = () => {
           <p style={{ color: '#666', fontStyle: 'italic', fontSize: '1.1rem', marginBottom: '1rem' }}>
             {searchQuery 
               ? `Nenhum produto encontrado para "${searchQuery}".` 
-              : 'Nenhum produto cadastrado ainda.'}
+              : categoryQuery 
+                ? `Nenhum produto encontrado na categoria "${categoryQuery}".`
+                : 'Nenhum produto cadastrado ainda.'}
           </p>
-          {searchQuery && (
+          {(searchQuery || categoryQuery) && (
             <button 
               onClick={() => {
                 setProducts([]);

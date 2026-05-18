@@ -1,59 +1,56 @@
 -- ==========================================
--- SCRIPT DE SEED (DADOS FICTÍCIOS)
+-- SCRIPT DE SEED (DADOS REAIS DA LOJA TECH)
 -- ==========================================
 
 -- Habilitar pgcrypto para criptografar senhas no auth.users
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
--- 1. Inserir Usuários (2 Admins e 1 Cliente)
--- A senha para todos os usuários será: 123456
--- NOTA: Ao rodar esse INSERT, o gatilho que configuramos anteriormente
--- criará as respectivas linhas na tabela "public.profiles" de forma automática!
+-- 1. Inserir Usuários (Admins e Cliente)
+-- Senha: 123
 INSERT INTO auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
 VALUES
-('a1111111-1111-1111-1111-111111111111', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'admin1@loja.com', crypt('123456', gen_salt('bf')), NOW(), '{"provider": "email", "providers": ["email"]}', '{"full_name": "Admin Master"}', NOW(), NOW()),
-
-('a2222222-2222-2222-2222-222222222222', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'admin2@loja.com', crypt('123456', gen_salt('bf')), NOW(), '{"provider": "email", "providers": ["email"]}', '{"full_name": "Admin Secundário"}', NOW(), NOW()),
-
-('c1111111-1111-1111-1111-111111111111', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'cliente@loja.com', crypt('123456', gen_salt('bf')), NOW(), '{"provider": "email", "providers": ["email"]}', '{"full_name": "Cliente Comprador"}', NOW(), NOW())
+('a1111111-1111-1111-1111-111111111111', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'admin@techhub.com', crypt('123', gen_salt('bf')), NOW(), '{"provider": "email", "providers": ["email"]}', '{"full_name": "Admin TechHub"}', NOW(), NOW()),
+('c1111111-1111-1111-1111-111111111111', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'cliente@email.com', crypt('123', gen_salt('bf')), NOW(), '{"provider": "email", "providers": ["email"]}', '{"full_name": "Usuário Teste"}', NOW(), NOW())
 ON CONFLICT (id) DO NOTHING;
-
--- Atualizar o perfil do Cliente com dados de endereço para poder simular um checkout
-UPDATE public.profiles
-SET phone = '11999999999', cpf = '12345678900', cep = '01001-000', address = 'Praça da Sé, 1', city = 'São Paulo', state = 'SP'
-WHERE id = 'c1111111-1111-1111-1111-111111111111';
 
 -- 2. Inserir Categorias
 INSERT INTO public.categories (id, name, slug, description)
 VALUES
-('c0000001-0000-0000-0000-000000000001', 'Eletrônicos', 'eletronicos', 'Celulares, notebooks e gadgets tecnológicos'),
-('c0000002-0000-0000-0000-000000000002', 'Vestuário', 'vestuario', 'Roupas, calçados e moda'),
-('c0000003-0000-0000-0000-000000000003', 'Casa e Decoração', 'casa-decoracao', 'Itens para o seu lar')
-ON CONFLICT (id) DO NOTHING;
+('c0000001-0000-0000-0000-000000000001', 'Smartphones e Wearables', 'smartphones-wearables', 'Celulares, Smartwatches e acessórios essenciais'),
+('c0000002-0000-0000-0000-000000000002', 'Informática e Hardware', 'informatica-hardware', 'Notebooks, SSDs e componentes de performance'),
+('c0000003-0000-0000-0000-000000000003', 'Periféricos Gamers', 'perifericos-gamers', 'Teclados, mouses e equipamentos para gamers'),
+('c0000004-0000-0000-0000-000000000004', 'Áudio', 'audio', 'Fones de ouvido e caixas de som premium'),
+('c0000005-0000-0000-0000-000000000005', 'TVs e Vídeo', 'tvs-video', 'Smart TVs e equipamentos de vídeo 4K'),
+('c0000006-0000-0000-0000-000000000006', 'Games', 'games', 'Consoles, controles e acessórios para jogos')
+ON CONFLICT (id) DO UPDATE 
+SET name = EXCLUDED.name, slug = EXCLUDED.slug, description = EXCLUDED.description;
 
--- 3. Inserir Produtos (Alguns marcados como 'is_featured = true' para aparecer na HomePage)
-INSERT INTO public.products (id, category_id, name, description, price, stock_quantity, image_url, is_featured)
+-- 3. Inserir Produtos
+INSERT INTO public.products (id, category_id, name, description, price, stock_quantity, image_urls, is_featured)
 VALUES
-('d0000001-0000-0000-0000-000000000001', 'c0000001-0000-0000-0000-000000000001', 'iPhone 15 Pro', 'Smartphone Apple com 256GB - Cor Titânio Natural', 7299.00, 15, 'https://images.unsplash.com/photo-1696446701796-da61225697cc?w=500&q=80', true),
+-- Smartphones e Wearables
+('d0000001-0000-0000-0000-000000000001', 'c0000001-0000-0000-0000-000000000001', 'iPhone 15 Pro', 'O mais poderoso iPhone com Titânio e Chip A17 Pro.', 7299.00, 10, '{"https://images.unsplash.com/photo-1696446701796-da61225697cc?w=800"}', true),
+('d0000002-0000-0000-0000-000000000002', 'c0000001-0000-0000-0000-000000000001', 'Smartwatch Haylou RS4', 'Tela AMOLED, monitoramento de saúde e bateria de longa duração.', 289.90, 25, '{"https://images.unsplash.com/photo-1508685096489-77a5ad2ba979?w=800"}', true),
+('d0000003-0000-0000-0000-000000000003', 'c0000001-0000-0000-0000-000000000001', 'Carregador Turbo 30W USB-C', 'Carregamento ultra-rápido para seus dispositivos.', 129.00, 50, '{"https://images.unsplash.com/photo-1619193100630-f56ec8000497?w=800"}', false),
 
-('d0000002-0000-0000-0000-000000000002', 'c0000001-0000-0000-0000-000000000001', 'Notebook Dell XPS 13', 'Notebook ultrafino com processador i7 e 16GB RAM', 9500.00, 8, 'https://images.unsplash.com/photo-1593642632823-8f785ba67e45?w=500&q=80', true),
+-- Informática e Hardware
+('d0000004-0000-0000-0000-000000000004', 'c0000002-0000-0000-0000-000000000002', 'Notebook Dell XPS 13', 'Elegância e poder com processador Intel i7 de última geração.', 9450.00, 5, '{"https://images.unsplash.com/photo-1593642632823-8f785ba67e45?w=800"}', true),
+('d0000005-0000-0000-0000-000000000005', 'c0000002-0000-0000-0000-000000000002', 'SSD Kingston NV2 1TB', 'Velocidade NVMe PCIe 4.0 para seu computador.', 389.00, 20, '{"https://images.unsplash.com/photo-1597872200370-493dea2393c0?w=800"}', true),
 
-('d0000003-0000-0000-0000-000000000003', 'c0000002-0000-0000-0000-000000000002', 'Camiseta Básica Preta', 'Camiseta 100% algodão super confortável', 59.90, 50, 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=500&q=80', false),
+-- Periféricos Gamers
+('d0000006-0000-0000-0000-000000000006', 'c0000003-0000-0000-0000-000000000003', 'Teclado Mecânico RGB K500', 'Switches azuis, iluminação RGB e durabilidade extrema.', 259.90, 15, '{"https://images.unsplash.com/photo-1511467687858-23d96c32e4ae?w=800"}', true),
+('d0000007-0000-0000-0000-000000000007', 'c0000003-0000-0000-0000-000000000003', 'Mouse Gamer RGB Pro', 'Sensor de alta precisão 12000 DPI e botões programáveis.', 189.00, 30, '{"https://images.unsplash.com/photo-1527814050087-3793815479db?w=800"}', true),
+('d0000008-0000-0000-0000-000000000008', 'c0000003-0000-0000-0000-000000000003', 'Webcam Full HD 1080p', 'Perfeita para streaming e reuniões com microfone integrado.', 220.00, 12, '{"https://images.unsplash.com/photo-1588508065123-287b28e013da?w=800"}', false),
 
-('d0000004-0000-0000-0000-000000000004', 'c0000002-0000-0000-0000-000000000002', 'Tênis Esportivo Running', 'Tênis de corrida de alta performance com amortecimento', 299.90, 30, 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=500&q=80', true),
+-- Áudio
+('d0000009-0000-0000-0000-000000000009', 'c0000004-0000-0000-0000-000000000004', 'Fone Bluetooth JBL Tune 520BT', 'Som JBL Pure Bass e 57 horas de bateria.', 349.00, 40, '{"https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800"}', true),
+('d0000010-0000-0000-0000-000000000010', 'c0000004-0000-0000-0000-000000000004', 'Caixa de Som Bluetooth XSound', 'Potência e fidelidade sonora à prova d''água.', 499.00, 18, '{"https://images.unsplash.com/photo-1608155613951-367468897587?w=800"}', false),
 
-('d0000005-0000-0000-0000-000000000005', 'c0000003-0000-0000-0000-000000000003', 'Cafeteira Expresso Premium', 'Máquina de café em cápsulas automática', 450.00, 20, 'https://images.unsplash.com/photo-1517246286466-231a47738f71?w=500&q=80', false)
-ON CONFLICT (id) DO NOTHING;
+-- TVs e Vídeo
+('d0000011-0000-0000-0000-000000000011', 'c0000005-0000-0000-0000-000000000005', 'Smart TV 50 Polegadas 4K UHD', 'Qualidade de cinema em casa com HDR e Inteligência Artificial.', 2450.00, 8, '{"https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=800"}', true),
 
--- 4. Inserir Pedido Fictício para o Cliente (Para popular a tela de Checkout)
-INSERT INTO public.orders (id, user_id, status, subtotal, shipping_fee, total_amount, shipping_address, payment_method)
-VALUES
-('e0000001-0000-0000-0000-000000000001', 'c1111111-1111-1111-1111-111111111111', 'paid', 7358.90, 25.00, 7383.90, 'Praça da Sé, 1 - São Paulo/SP - CEP: 01001-000', 'credit_card')
-ON CONFLICT (id) DO NOTHING;
-
--- 5. Inserir Itens do Pedido Fictício
-INSERT INTO public.order_items (id, order_id, product_id, quantity, unit_price)
-VALUES
-('f0000001-0000-0000-0000-000000000001', 'e0000001-0000-0000-0000-000000000001', 'd0000001-0000-0000-0000-000000000001', 1, 7299.00),
-('f0000002-0000-0000-0000-000000000002', 'e0000001-0000-0000-0000-000000000001', 'd0000003-0000-0000-0000-000000000003', 1, 59.90)
-ON CONFLICT (id) DO NOTHING;
+-- Games
+('d0000012-0000-0000-0000-000000000012', 'c0000006-0000-0000-0000-000000000006', 'Controle sem fio DualSense Edge', 'Alta performance e personalização para seu PS5.', 1250.00, 10, '{"https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?w=800"}', true)
+ON CONFLICT (id) DO UPDATE 
+SET name = EXCLUDED.name, description = EXCLUDED.description, price = EXCLUDED.price, 
+    stock_quantity = EXCLUDED.stock_quantity, image_urls = EXCLUDED.image_urls, is_featured = EXCLUDED.is_featured;

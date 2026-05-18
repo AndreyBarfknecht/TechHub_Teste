@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { Save, Loader2, Edit2 } from 'lucide-react';
-import type { Profile } from '../../types/profile';
+import type { Profile, ServiceResponse } from '../../types/profile';
 import { useAuth } from '../../context/AuthContext';
 
 interface PersonalInfoFormProps {
   profile: Profile;
-  onSave: (updates: Partial<Profile>) => Promise<any>;
+  onSave: (updates: Partial<Profile>) => Promise<ServiceResponse>;
 }
 
 export default function PersonalInfoForm({ profile, onSave }: PersonalInfoFormProps) {

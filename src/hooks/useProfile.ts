@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
-import type { Profile } from '../types/profile';
+import type { Profile, ServiceResponse } from '../types/profile';
 
 export const useProfile = () => {
   const { user } = useAuth();
@@ -24,8 +24,8 @@ export const useProfile = () => {
 
       if (err) throw err;
       setProfile(data);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setLoading(false);
     }
@@ -35,7 +35,7 @@ export const useProfile = () => {
     fetchProfile();
   }, [fetchProfile]);
 
-  const updateProfile = async (updates: Partial<Profile>) => {
+  const updateProfile = async (updates: Partial<Profile>): Promise<ServiceResponse> => {
     if (!user) return { error: 'User not authenticated' };
     try {
       const { error: err } = await supabase
@@ -46,8 +46,8 @@ export const useProfile = () => {
       if (err) throw err;
       await fetchProfile();
       return { error: null };
-    } catch (err: any) {
-      return { error: err.message };
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : 'Unknown error' };
     }
   };
 
@@ -69,8 +69,8 @@ export const useProfile = () => {
 
       await updateProfile({ avatar_url: data.publicUrl });
       return { publicUrl: data.publicUrl, error: null };
-    } catch (err: any) {
-      return { error: err.message, publicUrl: null };
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : 'Unknown error', publicUrl: null };
     }
   };
 

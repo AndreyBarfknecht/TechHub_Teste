@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
-import type { Address } from '../types/profile';
+import type { Address, ViaCepResponse, ServiceResponse } from '../types/profile';
 
 export const useAddresses = () => {
   const { user } = useAuth();
@@ -35,7 +35,7 @@ export const useAddresses = () => {
     fetchAddresses();
   }, [fetchAddresses]);
 
-  const addAddress = async (addressData: Omit<Address, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
+  const addAddress = async (addressData: Omit<Address, 'id' | 'user_id' | 'created_at' | 'updated_at'>): Promise<ServiceResponse> => {
     if (!user) return { error: 'Not authenticated' };
     try {
       if (addressData.is_default || addresses.length === 0) {
@@ -47,12 +47,12 @@ export const useAddresses = () => {
       if (error) throw error;
       await fetchAddresses();
       return { error: null };
-    } catch (err: any) {
-      return { error: err.message };
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : 'Unknown error' };
     }
   };
 
-  const updateAddress = async (id: string, updates: Partial<Address>) => {
+  const updateAddress = async (id: string, updates: Partial<Address>): Promise<ServiceResponse> => {
     if (!user) return { error: 'Not authenticated' };
     try {
       if (updates.is_default) {
@@ -62,24 +62,24 @@ export const useAddresses = () => {
       if (error) throw error;
       await fetchAddresses();
       return { error: null };
-    } catch (err: any) {
-      return { error: err.message };
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : 'Unknown error' };
     }
   };
 
-  const deleteAddress = async (id: string) => {
+  const deleteAddress = async (id: string): Promise<ServiceResponse> => {
     if (!user) return { error: 'Not authenticated' };
     try {
       const { error } = await supabase.from('user_addresses').delete().eq('id', id).eq('user_id', user.id);
       if (error) throw error;
       await fetchAddresses();
       return { error: null };
-    } catch (err: any) {
-      return { error: err.message };
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : 'Unknown error' };
     }
   };
 
-  const fetchCep = async (cep: string) => {
+  const fetchCep = async (cep: string): Promise<ViaCepResponse | null> => {
     const cleanCep = cep.replace(/\D/g, '');
     if (cleanCep.length !== 8) return null;
     
