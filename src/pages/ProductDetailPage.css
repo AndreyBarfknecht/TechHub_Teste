@@ -282,3 +282,38 @@
   text-transform: uppercase;
   z-index: 10;
 }
+
+/* Related Products Styling */
+.related-products-section {
+  margin-top: 4rem;
+  padding-top: 2.5rem;
+  padding-bottom: 2rem;
+  border-top: 1px solid var(--border);
+  background: var(--bg-color); /* To separate from the white card above if needed */
+}
+
+.related-products-section h2 {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.5rem;
+  color: var(--text-main);
+  margin-bottom: 1.5rem;
+}
+
+.related-grid {
+  display: flex;
+  gap: 1.5rem;
+  overflow-x: auto;
+  padding-bottom: 1rem;
+  scroll-behavior: smooth;
+  /* Hide scrollbar typically */
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+.related-grid::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
+}
+
+.related-grid > div {
+  width: 280px;
+  flex-shrink: 0;
+}
