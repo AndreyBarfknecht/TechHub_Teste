@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, CreditCard, Loader2, MapPin, QrCode, ArrowRight, ShoppingBag, Truck, AlertCircle, Barcode } from 'lucide-react';
+import { Check, CreditCard, Loader2, MapPin, QrCode, ArrowRight, ShoppingBag, Truck, AlertCircle, Barcode, Tag, CheckCircle2, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { supabase } from '../lib/supabase';
@@ -10,7 +10,7 @@ import { calculateShippingRate } from '../lib/shipping';
 
 const CheckoutPage = () => {
   const { user, loading: authLoading } = useAuth();
-  const { items, totalPrice, totalItems, clearCart } = useCart();
+  const { items, totalPrice, totalItems, clearCart, appliedCoupon, discountAmount, applyCoupon, removeCoupon } = useCart();
   const navigate = useNavigate();
 
   const [currentStep, setCurrentStep] = useState<number>(1);
@@ -20,9 +20,11 @@ const CheckoutPage = () => {
   const [finalSummary, setFinalSummary] = useState<{ 
     subtotal: number; 
     shipping: number; 
+    discount: number;
     total: number;
     paymentMethod: string;
     installments: number;
+    couponCode?: string;
   } | null>(null);
 
   const [shippingFee, setShippingFee] = useState<number>(25.9);
@@ -30,7 +32,7 @@ const CheckoutPage = () => {
   const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
   const [isManuallyCalculated, setIsManuallyCalculated] = useState(false);
   
-  const orderTotal = totalPrice + shippingFee;
+  const orderTotal = Math.max(0, totalPrice + shippingFee - discountAmount);
 
   const [delivery, setDelivery] = useState({
     name: '', cpf: '', phone: '', cep: '', address: '', number: '', complement: '', city: '', state: ''
@@ -42,6 +44,35 @@ const CheckoutPage = () => {
     cardNumber: '', cardName: '', cardExpiry: '', cardCvv: '', cardFlag: '', installments: 1
   });
   const [focusedCvv, setFocusedCvv] = useState(false);
+
+  // ----- COUPON -----
+  const [couponInput, setCouponInput] = useState('');
+  const [couponError, setCouponError] = useState('');
+  const [couponLoading, setCouponLoading] = useState(false);
+
+  const handleApplyCoupon = async () => {
+    const code = couponInput.trim().toUpperCase();
+    if (!code) return;
+    setCouponError('');
+    setCouponLoading(true);
+    const { data, error } = await supabase
+      .from('coupons')
+      .select('*')
+      .eq('code', code)
+      .eq('is_active', true)
+      .single();
+    setCouponLoading(false);
+    if (error || !data) {
+      setCouponError('Cupom inválido ou não encontrado.');
+      return;
+    }
+    if (data.max_uses !== null && data.usage_count >= data.max_uses) {
+      setCouponError('Este cupom atingiu o limite de usos.');
+      return;
+    }
+    applyCoupon(data);
+    setCouponInput('');
+  };
 
   // ----- VIA CEP & SHIPPING -----
   const handleCalculateShipping = React.useCallback(async (cepToCalc: string) => {
@@ -224,6 +255,11 @@ const CheckoutPage = () => {
           .update({ stock_quantity: Math.max(0, newStock) })
           .eq('id', item.product.id);
       }
+
+      // INCREMENTAR USO DO CUPOM
+      if (appliedCoupon) {
+        await supabase.rpc('increment_coupon_usage', { coupon_id: appliedCoupon.id });
+      }
       
       const methodLabels: Record<string, string> = {
         pix: 'PIX',
@@ -234,9 +270,11 @@ const CheckoutPage = () => {
       setFinalSummary({
         subtotal: totalPrice,
         shipping: shippingFee,
+        discount: discountAmount,
         total: orderTotal,
         paymentMethod: methodLabels[payment.method] || 'Desconhecido',
-        installments: payment.method === 'credit_card' ? payment.installments : 1
+        installments: payment.method === 'credit_card' ? payment.installments : 1,
+        couponCode: appliedCoupon?.code,
       });
 
       clearCart();
@@ -409,6 +447,12 @@ const CheckoutPage = () => {
                 <div className="success-details">
                   <div className="success-details-row"><span>Itens:</span><span>{formatBRL(finalSummary?.subtotal || 0)}</span></div>
                   <div className="success-details-row"><span>Frete:</span><span>{finalSummary?.shipping === 0 ? 'Grátis' : formatBRL(finalSummary?.shipping || 0)}</span></div>
+                  {(finalSummary?.discount ?? 0) > 0 && (
+                    <div className="success-details-row" style={{ color: '#16a34a' }}>
+                      <span>🎟 Desconto ({finalSummary?.couponCode}):</span>
+                      <span>-{formatBRL(finalSummary?.discount || 0)}</span>
+                    </div>
+                  )}
                   <div className="success-details-row"><strong>Total Pago:</strong><strong>{formatBRL(finalSummary?.total || 0)}</strong></div>
                   <div className="summary-divider" style={{ margin: '1rem 0' }} />
                   <div className="success-details-row">
@@ -441,6 +485,63 @@ const CheckoutPage = () => {
                     )}
                   </div>
                 </div>
+
+                {/* COUPON SECTION */}
+                <div className="checkout-coupon-section">
+                  {appliedCoupon ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      <div style={{
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                        padding: '0.6rem 0.85rem',
+                        background: '#dcfce7', border: '1px solid #86efac',
+                        borderRadius: '8px',
+                      }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600, color: '#16a34a', fontSize: '0.85rem' }}>
+                          <CheckCircle2 size={14} />
+                          {appliedCoupon.code} — {appliedCoupon.discount_percent}% OFF
+                        </span>
+                        <button
+                          onClick={() => { removeCoupon(); setCouponError(''); }}
+                          title="Remover cupom"
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#16a34a', display: 'flex', alignItems: 'center', padding: '0.2rem' }}
+                        >
+                          <X size={15} />
+                        </button>
+                      </div>
+                      <div className="summary-line" style={{ color: '#16a34a', fontWeight: 600 }}>
+                        <span>🏷️ Cupom {appliedCoupon.code} ({appliedCoupon.discount_percent}%)</span>
+                        <span>- {formatBRL(discountAmount)}</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="checkout-coupon-input-group">
+                        <Tag size={15} color="var(--text-muted)" style={{ flexShrink: 0 }} />
+                        <input
+                          type="text"
+                          placeholder="Cupom de desconto"
+                          value={couponInput}
+                          onChange={e => { setCouponInput(e.target.value.toUpperCase()); setCouponError(''); }}
+                          className="checkout-coupon-input"
+                          onKeyDown={e => e.key === 'Enter' && handleApplyCoupon()}
+                        />
+                        <button
+                          onClick={handleApplyCoupon}
+                          className="checkout-coupon-btn"
+                          disabled={couponLoading || !couponInput.trim()}
+                        >
+                          {couponLoading ? <Loader2 size={13} className="spinning" /> : 'Aplicar'}
+                        </button>
+                      </div>
+                      {couponError && (
+                        <p style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: '0.3rem', marginBottom: 0 }}>
+                          {couponError}
+                        </p>
+                      )}
+                    </>
+                  )}
+                </div>
+
                 <div className="summary-divider" />
                 <div className="summary-total" style={{display:'flex', justifyContent:'space-between', fontSize:'1.1rem', fontWeight:'bold'}}><span>Total</span><span>{formatBRL(orderTotal)}</span></div>
               </div>
