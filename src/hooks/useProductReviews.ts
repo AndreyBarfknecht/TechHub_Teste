@@ -14,7 +14,7 @@ export const useProductReviews = (productId: string | undefined) => {
       setLoading(true);
       const { data, error: supabaseError } = await supabase
         .from('reviews')
-        .select('*, profiles(full_name)')
+        .select('*, profiles(full_name, avatar_url)')
         .eq('product_id', productId)
         .order('created_at', { ascending: false });
 
