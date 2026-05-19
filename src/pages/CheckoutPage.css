@@ -130,6 +130,14 @@
   flex: 1;
 }
 
+.saved-address-selector {
+  margin-bottom: 2rem;
+  padding: 1.25rem;
+  background-color: #f0f7ff;
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--primary);
+}
+
 .form-group label {
   font-size: 0.875rem;
   font-weight: 600;

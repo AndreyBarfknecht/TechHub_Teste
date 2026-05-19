@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { supabase } from '../lib/supabase';
 import './CheckoutPage.css';
+import type { Address } from '../types/profile';
 
 import { calculateShippingRate } from '../lib/shipping';
 
@@ -31,6 +32,8 @@ const CheckoutPage = () => {
   const [shippingInfo, setShippingInfo] = useState<{ carrier: string; days: number } | null>(null);
   const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
   const [isManuallyCalculated, setIsManuallyCalculated] = useState(false);
+  
+  const [savedAddresses, setSavedAddresses] = useState<Address[]>([]);
   
   const orderTotal = Math.max(0, totalPrice + shippingFee - discountAmount);
 
@@ -124,28 +127,52 @@ const CheckoutPage = () => {
     }
   }, [totalPrice, isManuallyCalculated]);
 
-  // Profile data
+  // Profile and Address data
   useEffect(() => {
     if (user?.id) {
-      const loadProfile = async () => {
+      const loadUserData = async () => {
         try {
-          const { data, error } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-          if (data && !error) {
+          // 1. Load basic profile (name, cpf, phone)
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+            
+          // 2. Load addresses, prioritizing the default one
+          const { data: addresses } = await supabase
+            .from('user_addresses')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('is_default', { ascending: false })
+            .order('created_at', { ascending: false });
+
+          if (addresses) setSavedAddresses(addresses);
+          const defaultAddr = addresses?.[0];
+
+          if (profile || defaultAddr) {
             setDelivery(prev => ({ 
               ...prev, 
-              name: data.full_name || prev.name, 
-              phone: data.phone || prev.phone, 
-              cpf: data.cpf || prev.cpf, 
-              cep: data.cep || prev.cep, 
-              address: data.address || prev.address, 
-              city: data.city || prev.city, 
-              state: data.state || prev.state 
+              name: profile?.full_name || prev.name, 
+              phone: profile?.phone || prev.phone, 
+              cpf: profile?.cpf || prev.cpf, 
+              // Priority: user_addresses > profile fields
+              cep: defaultAddr?.zip_code || profile?.cep || prev.cep, 
+              address: defaultAddr?.street || profile?.address || prev.address, 
+              number: defaultAddr?.number || prev.number,
+              complement: defaultAddr?.complement || prev.complement,
+              city: defaultAddr?.city || profile?.city || prev.city, 
+              state: defaultAddr?.state || profile?.state || prev.state 
             }));
-            if (data.cep) handleCalculateShipping(data.cep);
+
+            const finalCep = defaultAddr?.zip_code || profile?.cep;
+            if (finalCep) handleCalculateShipping(finalCep);
           }
-        } catch (err) { console.error(err); }
+        } catch (err) { 
+          console.error("Erro ao carregar dados do usuário:", err); 
+        }
       };
-      loadProfile();
+      loadUserData();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
@@ -302,6 +329,38 @@ const CheckoutPage = () => {
             {currentStep === 1 && (
               <div className="card">
                 <h2><MapPin size={20} /> Entrega</h2>
+                
+                {savedAddresses.length > 0 && (
+                  <div className="form-group saved-address-selector">
+                    <label>Usar endereço salvo</label>
+                    <select 
+                      className="form-input" 
+                      onChange={(e) => {
+                        const addr = savedAddresses.find(a => a.id === e.target.value);
+                        if (addr) {
+                          setDelivery(prev => ({
+                            ...prev,
+                            cep: addr.zip_code,
+                            address: addr.street,
+                            number: addr.number,
+                            complement: addr.complement || '',
+                            city: addr.city,
+                            state: addr.state
+                          }));
+                          handleCalculateShipping(addr.zip_code);
+                        }
+                      }}
+                    >
+                      <option value="">Selecione um endereço...</option>
+                      {savedAddresses.map(addr => (
+                        <option key={addr.id} value={addr.id}>
+                          {addr.alias} — {addr.street}, {addr.number}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
                 <div className="form-group"><label>Nome Completo *</label><input type="text" className={`form-input ${deliveryErrors.name ? 'input-error' : ''}`} value={delivery.name} onChange={e => handleMask(e, 'name')} />{deliveryErrors.name && <span className="form-error">{deliveryErrors.name}</span>}</div>
                 <div className="form-row">
                   <div className="form-group"><label>CPF *</label><input type="text" className={`form-input ${deliveryErrors.cpf ? 'input-error' : ''}`} value={delivery.cpf} onChange={e => handleMask(e, 'cpf')} />{deliveryErrors.cpf && <span className="form-error">{deliveryErrors.cpf}</span>}</div>
