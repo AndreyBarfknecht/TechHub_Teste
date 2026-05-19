@@ -135,3 +135,22 @@ CREATE POLICY "Users can view own addresses" ON public.user_addresses FOR SELECT
 CREATE POLICY "Users can insert own addresses" ON public.user_addresses FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Users can update own addresses" ON public.user_addresses FOR UPDATE USING (auth.uid() = user_id);
 CREATE POLICY "Users can delete own addresses" ON public.user_addresses FOR DELETE USING (auth.uid() = user_id);
+
+-- 8. Tabela de Cupons de Desconto
+CREATE TABLE public.coupons (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    code TEXT NOT NULL UNIQUE,
+    discount_percent DECIMAL(5,2) NOT NULL CHECK (discount_percent > 0 AND discount_percent <= 100),
+    uses_limit INTEGER DEFAULT NULL, -- NULL = ilimitado
+    uses_count INTEGER DEFAULT 0 NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+ALTER TABLE public.coupons ENABLE ROW LEVEL SECURITY;
+
+-- Qualquer um pode consultar cupons (necessário para validar no carrinho)
+CREATE POLICY "Coupons are viewable by everyone" ON public.coupons FOR SELECT USING (true);
+-- Apenas usuários autenticados (admin) podem criar, editar ou deletar
+CREATE POLICY "Authenticated users can manage coupons" ON public.coupons
+    FOR ALL USING (auth.role() = 'authenticated');

@@ -3,20 +3,24 @@
 
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Trash2, Plus, Minus, ShoppingBag, ArrowLeft, ShoppingCart } from 'lucide-react';
+import { Trash2, Plus, Minus, ShoppingBag, ArrowLeft, ShoppingCart, X, Loader2, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import { supabase } from '../lib/supabase';
 import { ShippingCalculator } from '../components/cart/ShippingCalculator';
 import './CartPage.css';
 
 const CartPage = () => {
-  const { items, totalPrice, totalItems, removeFromCart, updateQuantity, clearCart } = useCart();
+  const { items, totalPrice, totalItems, removeFromCart, updateQuantity, clearCart, appliedCoupon, discountAmount, applyCoupon, removeCoupon } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [shippingFee, setShippingFee] = React.useState<number>(totalPrice >= 200 ? 0 : 25.9);
   const [isManuallyCalculated, setIsManuallyCalculated] = React.useState(false);
-  const [coupon, setCoupon] = React.useState('');
-  const [discount, setDiscount] = React.useState<number>(0);
+
+  // --- Coupon state (UI only) ---
+  const [couponInput, setCouponInput] = React.useState('');
+  const [couponError, setCouponError] = React.useState('');
+  const [couponLoading, setCouponLoading] = React.useState(false);
 
   const handleCheckout = () => {
     if (!user) {
@@ -26,33 +30,57 @@ const CartPage = () => {
     }
   };
 
-
   // Update shipping fee if totalPrice changes (handle free shipping threshold)
   React.useEffect(() => {
-    // We only automatically set to free (0) if the user hasn't manually calculated a rate yet.
-    // This allows them to see their API/mock results for the class project.
     if (totalPrice >= 200 && !isManuallyCalculated) {
       setShippingFee(0);
     } else if (!isManuallyCalculated && shippingFee === 0 && totalPrice < 200) {
-      // If it was free but now it's not, and user hasn't calculated yet, reset to default
       setShippingFee(25.9);
     }
   }, [totalPrice, isManuallyCalculated, shippingFee]);
 
-  const handleApplyCoupon = () => {
-    // Simulating a simple coupon system
-    if (coupon.toUpperCase() === 'TECHHUB10') {
-      setDiscount(totalPrice * 0.1);
-    } else if (coupon.toUpperCase() === 'FRETEGRATIS') {
-      setShippingFee(0);
-      setDiscount(0);
-    } else {
-      alert('Cupom inválido');
-      setDiscount(0);
+
+  const handleApplyCoupon = async () => {
+    const code = couponInput.trim().toUpperCase();
+    if (!code) return;
+
+    setCouponError('');
+    setCouponLoading(true);
+
+    const { data, error } = await supabase
+      .from('coupons')
+      .select('*')
+      .eq('code', code)
+      .eq('is_active', true)
+      .single();
+
+    setCouponLoading(false);
+
+    if (error || !data) {
+      setCouponError('Cupom inválido ou não encontrado.');
+      removeCoupon();
+      return;
     }
+
+    const coupon = data as import('../types/coupon').Coupon;
+
+    // Check usage limit
+    if (coupon.max_uses !== null && coupon.usage_count >= coupon.max_uses) {
+      setCouponError('Este cupom atingiu o limite de usos e não pode mais ser aplicado.');
+      removeCoupon();
+      return;
+    }
+
+    applyCoupon(coupon);
+    setCouponInput('');
   };
 
-  const orderTotal = totalPrice + shippingFee - discount;
+  const handleRemoveCoupon = () => {
+    removeCoupon();
+    setCouponError('');
+  };
+
+  const orderTotal = Math.max(0, totalPrice + shippingFee - discountAmount);
 
   const formatBRL = (value: number) =>
     value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -212,24 +240,54 @@ const CartPage = () => {
                 </div>
               </div>
 
+              {/* COUPON SECTION */}
               <div className="coupon-section">
-                <div className="coupon-input-group">
-                  <input
-                    type="text"
-                    placeholder="Cupom de desconto"
-                    value={coupon}
-                    onChange={(e) => setCoupon(e.target.value)}
-                    className="coupon-input"
-                  />
-                  <button onClick={handleApplyCoupon} className="coupon-btn">
-                    Aplicar
-                  </button>
-                </div>
-                {discount > 0 && (
-                  <div className="summary-line discount-line">
-                    <span>Desconto</span>
-                    <span className="discount-value">-{formatBRL(discount)}</span>
+                {appliedCoupon ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <div style={{
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      padding: '0.6rem 0.85rem',
+                      background: '#dcfce7', border: '1px solid #86efac',
+                      borderRadius: '8px',
+                    }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600, color: '#16a34a', fontSize: '0.9rem' }}>
+                        <CheckCircle2 size={15} />
+                        {appliedCoupon.code} — {appliedCoupon.discount_percent}% OFF
+                      </span>
+                      <button
+                        onClick={handleRemoveCoupon}
+                        title="Remover cupom"
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#16a34a', display: 'flex', alignItems: 'center' }}
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                    <div className="summary-line discount-line">
+                      <span>Desconto</span>
+                      <span className="discount-value">-{formatBRL(discountAmount)}</span>
+                    </div>
                   </div>
+                ) : (
+                  <>
+                    <div className="coupon-input-group">
+                      <input
+                        type="text"
+                        placeholder="Cupom de desconto"
+                        value={couponInput}
+                        onChange={(e) => { setCouponInput(e.target.value.toUpperCase()); setCouponError(''); }}
+                        className="coupon-input"
+                        onKeyDown={(e) => e.key === 'Enter' && handleApplyCoupon()}
+                      />
+                      <button onClick={handleApplyCoupon} className="coupon-btn" disabled={couponLoading}>
+                        {couponLoading ? <Loader2 size={14} className="spinning" /> : 'Aplicar'}
+                      </button>
+                    </div>
+                    {couponError && (
+                      <p style={{ color: '#dc2626', fontSize: '0.8rem', marginTop: '0.35rem', marginBottom: 0 }}>
+                        {couponError}
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -244,9 +302,9 @@ const CartPage = () => {
                 ou 10x de {formatBRL(orderTotal / 10)} sem juros
               </p>
 
-              <button 
-                className="btn-primary checkout-btn" 
-                onClick={handleCheckout} 
+              <button
+                className="btn-primary checkout-btn"
+                onClick={handleCheckout}
                 disabled={items.length === 0}
               >
                 Finalizar Compra
