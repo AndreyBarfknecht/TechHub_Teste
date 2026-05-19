@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Package, ArrowLeft, ChevronDown, ChevronUp, Clock, MapPin, CreditCard, Loader2 } from 'lucide-react';
+import { Package, ArrowLeft, ChevronDown, ChevronUp, Clock, MapPin, CreditCard, Loader2, RefreshCcw } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import type { OrderDetail } from '../types/profile';
@@ -279,6 +279,28 @@ const OrdersPage = () => {
                         </div>
                       </div>
                     ))}
+                  </div>
+
+                  <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'flex-end' }}>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate('/info/returns');
+                      }}
+                      className="btn-outline"
+                      style={{ 
+                        fontSize: '0.85rem', 
+                        padding: '0.6rem 1.2rem', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '0.5rem',
+                        borderColor: 'var(--primary)',
+                        color: 'var(--primary)'
+                      }}
+                    >
+                      <RefreshCcw size={16} />
+                      Solicitar Troca ou Devolução
+                    </button>
                   </div>
                 </div>
               )}
