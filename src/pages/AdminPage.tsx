@@ -3,11 +3,12 @@ import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import ProductForm from "../components/admin/ProductForm";
 import ProductList from "../components/admin/ProductList";
+import StoreSettings from "../components/admin/StoreSettings";
 import type { Product } from "../types/product";
 import type { Session } from '@supabase/supabase-js';
 import {
   LogOut, LayoutDashboard, ShieldCheck, Plus, X,
-  ExternalLink, ArrowLeft, Tag, Trash2, ToggleLeft, ToggleRight
+  ExternalLink, ArrowLeft, Tag, Trash2, ToggleLeft, ToggleRight, Settings
 } from "lucide-react";
 import "./Admin.css";
 
@@ -30,6 +31,7 @@ export default function AdminPage() {
   const [loginError, setLoginError] = useState("");
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [message, setMessage] = useState<{ type: "success" | "error" | ""; text: string }>({ type: "", text: "" });
 
@@ -199,6 +201,10 @@ export default function AdminPage() {
               <button onClick={openCouponModal} className="btn-outline-admin"
                 style={{ height: "42px", display: "flex", alignItems: "center", gap: "0.5rem" }}>
                 <Tag size={18} /> Criar Cupom
+              </button>
+              <button onClick={() => setIsSettingsModalOpen(true)} className="btn-outline-admin"
+                style={{ height: "42px", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <Settings size={18} /> Configurações
               </button>
               <button onClick={openAddModal} className="btn-primary"
                 style={{ display: "flex", alignItems: "center", gap: "0.5rem", height: "42px" }}>
@@ -384,6 +390,23 @@ export default function AdminPage() {
                     {couponLoading ? "Criando..." : "Criar Cupom"}
                   </button>
                 </form>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {isSettingsModalOpen && (
+          <div className="modal-overlay" onClick={() => setIsSettingsModalOpen(false)}>
+            <div className="modal-container" style={{ maxWidth: 550 }} onClick={e => e.stopPropagation()}>
+              <div className="modal-header">
+                <h2 style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <Settings size={20} color="var(--primary)" />
+                  Configurações da Loja
+                </h2>
+                <button className="modal-close-btn" onClick={() => setIsSettingsModalOpen(false)}><X size={24} /></button>
+              </div>
+              <div className="modal-content">
+                <StoreSettings />
               </div>
             </div>
           </div>
