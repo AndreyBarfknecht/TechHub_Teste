@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { 
+  ChevronLeft,
   ChevronRight, 
   Star,
   Truck,
@@ -82,6 +83,19 @@ export default function ProductDetailPage() {
       document.title = 'E-commerce';
     };
   }, [product]);
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const scrollRelated = (direction: 'left' | 'right') => {
+    if (scrollRef.current) {
+      const { scrollLeft, clientWidth } = scrollRef.current;
+      const scrollTo = direction === 'left' 
+        ? scrollLeft - clientWidth * 0.8 
+        : scrollLeft + clientWidth * 0.8;
+      
+      scrollRef.current.scrollTo({ left: scrollTo, behavior: 'smooth' });
+    }
+  };
 
   if (loading) return <ProductDetailSkeleton />;
 
@@ -237,11 +251,37 @@ export default function ProductDetailPage() {
         {/* Related Products */}
         {!relatedLoading && relatedProducts && relatedProducts.length > 0 && (
           <div className="related-products-section">
-            <h2>Quem viu este produto também comprou</h2>
-            <div className="related-grid">
-              {relatedProducts.map(p => (
-                <ProductCard key={p.id} product={p} />
-              ))}
+            <div className="related-header">
+              <div className="related-title-box">
+                <span className="related-subtitle">Você também pode gostar</span>
+                <h2>Quem viu este produto também comprou</h2>
+              </div>
+              <div className="carousel-nav-buttons">
+                <button 
+                  className="nav-btn prev" 
+                  onClick={() => scrollRelated('left')}
+                  aria-label="Anterior"
+                >
+                  <ChevronLeft size={20} />
+                </button>
+                <button 
+                  className="nav-btn next" 
+                  onClick={() => scrollRelated('right')}
+                  aria-label="Próximo"
+                >
+                  <ChevronRight size={20} />
+                </button>
+              </div>
+            </div>
+            
+            <div className="related-carousel-wrapper">
+              <div className="related-grid" ref={scrollRef}>
+                {relatedProducts.map(p => (
+                  <div key={p.id} className="related-item-wrapper">
+                    <ProductCard product={p} />
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
