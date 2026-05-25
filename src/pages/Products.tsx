@@ -13,6 +13,7 @@ const Products = () => {
   const categoryQuery = searchParams.get('category') || '';
   const [minPrice, setMinPrice] = useState<string>('');
   const [maxPrice, setMaxPrice] = useState<string>('');
+  const [sortOrder, setSortOrder] = useState<'none' | 'asc' | 'desc'>('none');
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -73,13 +74,19 @@ const Products = () => {
     );
   }
 
-  const filteredProducts = products.filter(p => {
-    const min = minPrice !== '' ? parseFloat(minPrice) : null;
-    const max = maxPrice !== '' ? parseFloat(maxPrice) : null;
-    if (min !== null && p.price < min) return false;
-    if (max !== null && p.price > max) return false;
-    return true;
-  });
+  const filteredProducts = products
+    .filter(p => {
+      const min = minPrice !== '' ? parseFloat(minPrice) : null;
+      const max = maxPrice !== '' ? parseFloat(maxPrice) : null;
+      if (min !== null && !isNaN(min) && p.price < min) return false;
+      if (max !== null && !isNaN(max) && p.price > max) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      if (sortOrder === 'asc') return a.price - b.price;
+      if (sortOrder === 'desc') return b.price - a.price;
+      return 0;
+    });
 
   return (
     <div className="container fade-in" style={{ padding: '4rem 1.5rem', minHeight: '60vh' }}>
@@ -112,11 +119,21 @@ const Products = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>De</span>
           <input
-            type="number"
-            min={0}
+            type="text"
+            inputMode="decimal"
             placeholder="R$ mín"
             value={minPrice}
             onChange={e => setMinPrice(e.target.value)}
+            onKeyDown={(e) => {
+              const allowed = ['Backspace','Delete','ArrowLeft','ArrowRight','Tab','Enter'];
+              if (!allowed.includes(e.key) && !/^\d$/.test(e.key) && e.key !== '.') {
+                e.preventDefault();
+              }
+            }}
+            onPaste={(e) => {
+              const text = e.clipboardData.getData('text');
+              if (!/^\d*\.?\d*$/.test(text)) e.preventDefault();
+            }}
             style={{
               width: '110px',
               padding: '0.5rem 0.75rem',
@@ -134,11 +151,21 @@ const Products = () => {
           />
           <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>até</span>
           <input
-            type="number"
-            min={0}
+            type="text"
+            inputMode="decimal"
             placeholder="R$ máx"
             value={maxPrice}
             onChange={e => setMaxPrice(e.target.value)}
+            onKeyDown={(e) => {
+              const allowed = ['Backspace','Delete','ArrowLeft','ArrowRight','Tab','Enter'];
+              if (!allowed.includes(e.key) && !/^\d$/.test(e.key) && e.key !== '.') {
+                e.preventDefault();
+              }
+            }}
+            onPaste={(e) => {
+              const text = e.clipboardData.getData('text');
+              if (!/^\d*\.?\d*$/.test(text)) e.preventDefault();
+            }}
             style={{
               width: '110px',
               padding: '0.75rem',
@@ -156,9 +183,34 @@ const Products = () => {
           />
         </div>
 
-        {(minPrice !== '' || maxPrice !== '') && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Ordenar:</span>
+          <select
+            value={sortOrder}
+            onChange={e => setSortOrder(e.target.value as 'none' | 'asc' | 'desc')}
+            style={{
+              padding: '0.5rem 0.75rem',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-sm)',
+              fontSize: '0.875rem',
+              fontFamily: 'inherit',
+              color: 'var(--text-main)',
+              background: 'var(--surface)',
+              cursor: 'pointer',
+              outline: 'none',
+            }}
+            onFocus={e => e.target.style.borderColor = 'var(--primary)'}
+            onBlur={e => e.target.style.borderColor = 'var(--border)'}
+          >
+            <option value="none">Relevância</option>
+            <option value="asc">Menor preço</option>
+            <option value="desc">Maior preço</option>
+          </select>
+        </div>
+
+        {(minPrice !== '' || maxPrice !== '' || sortOrder !== 'none') && (
           <button
-            onClick={() => { setMinPrice(''); setMaxPrice(''); }}
+            onClick={() => { setMinPrice(''); setMaxPrice(''); setSortOrder('none'); }}
             style={{
               padding: '0.5rem 1rem',
               background: 'none',
@@ -184,7 +236,7 @@ const Products = () => {
           </button>
         )}
 
-        {(minPrice !== '' || maxPrice !== '') && (
+        {(minPrice !== '' || maxPrice !== '' || sortOrder !== 'none') && (
           <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginLeft: 'auto' }}>
             {filteredProducts.length} {filteredProducts.length === 1 ? 'produto encontrado' : 'produtos encontrados'}
           </span>
@@ -198,7 +250,7 @@ const Products = () => {
             Nenhum produto encontrado nessa faixa de preço.
           </p>
           <button
-            onClick={() => { setMinPrice(''); setMaxPrice(''); }}
+            onClick={() => { setMinPrice(''); setMaxPrice(''); setSortOrder('none'); }}
             style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', textDecoration: 'underline', fontSize: '0.95rem' }}
           >
             Limpar filtro de preço
