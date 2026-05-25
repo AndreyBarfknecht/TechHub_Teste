@@ -1,14 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../../lib/supabase";
 import { 
-  TrendingUp, 
   ShoppingBag, 
   DollarSign, 
   Package,
   Calendar,
   ChevronDown,
   ArrowUpRight,
-  ArrowDownRight,
   Target,
   Users,
   AlertTriangle,
@@ -43,25 +41,6 @@ interface CategorySales {
   name: string;
   revenue: number;
   percentage: number;
-}
-
-interface OrderItem {
-  quantity: number;
-  product_id: string;
-  unit_price: number;
-  products: {
-    name: string;
-    image_urls: string[];
-  } | null;
-}
-
-interface OrderData {
-  id: string;
-  total_amount: number;
-  status: string;
-  created_at: string;
-  payment_method: string;
-  order_items: OrderItem[];
 }
 
 export default function SalesReport() {
