@@ -11,6 +11,8 @@ const Products = () => {
   const [searchParams] = useSearchParams();
   const searchQuery = searchParams.get('search') || '';
   const categoryQuery = searchParams.get('category') || '';
+  const [minPrice, setMinPrice] = useState<string>('');
+  const [maxPrice, setMaxPrice] = useState<string>('');
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -71,6 +73,14 @@ const Products = () => {
     );
   }
 
+  const filteredProducts = products.filter(p => {
+    const min = minPrice !== '' ? parseFloat(minPrice) : null;
+    const max = maxPrice !== '' ? parseFloat(maxPrice) : null;
+    if (min !== null && p.price < min) return false;
+    if (max !== null && p.price > max) return false;
+    return true;
+  });
+
   return (
     <div className="container fade-in" style={{ padding: '4rem 1.5rem', minHeight: '60vh' }}>
       <h2 style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>
@@ -78,11 +88,123 @@ const Products = () => {
       </h2>
       <p style={{ color: 'var(--text-muted)', marginBottom: '3rem' }}>
         {searchQuery || categoryQuery 
-          ? `Encontramos ${products.length} ${products.length === 1 ? 'produto' : 'produtos'} correspondentes.`
+          ? `Encontramos ${filteredProducts.length} ${filteredProducts.length === 1 ? 'produto' : 'produtos'} correspondentes.`
           : 'Explore toda a nossa coleção de produtos premium.'}
       </p>
 
-      {products.length === 0 ? (
+      {/* FILTRO DE PREÇO */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.75rem',
+        flexWrap: 'wrap',
+        marginBottom: '1.5rem',
+        padding: '1rem 1.25rem',
+        background: 'var(--surface)',
+        border: '1px solid var(--border)',
+        borderRadius: 'var(--radius-md)',
+        boxShadow: 'var(--shadow-sm)'
+      }}>
+        <span style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--text-main)', whiteSpace: 'nowrap' }}>
+          Filtrar por preço:
+        </span>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>De</span>
+          <input
+            type="number"
+            min={0}
+            placeholder="R$ mín"
+            value={minPrice}
+            onChange={e => setMinPrice(e.target.value)}
+            style={{
+              width: '110px',
+              padding: '0.5rem 0.75rem',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-sm)',
+              fontSize: '0.875rem',
+              fontFamily: 'inherit',
+              color: 'var(--text-main)',
+              background: 'var(--surface)',
+              outline: 'none',
+              transition: 'border-color 0.2s'
+            }}
+            onFocus={e => e.target.style.borderColor = 'var(--primary)'}
+            onBlur={e => e.target.style.borderColor = 'var(--border)'}
+          />
+          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>até</span>
+          <input
+            type="number"
+            min={0}
+            placeholder="R$ máx"
+            value={maxPrice}
+            onChange={e => setMaxPrice(e.target.value)}
+            style={{
+              width: '110px',
+              padding: '0.75rem',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-sm)',
+              fontSize: '0.875rem',
+              fontFamily: 'inherit',
+              color: 'var(--text-main)',
+              background: 'var(--surface)',
+              outline: 'none',
+              transition: 'border-color 0.2s'
+            }}
+            onFocus={e => e.target.style.borderColor = 'var(--primary)'}
+            onBlur={e => e.target.style.borderColor = 'var(--border)'}
+          />
+        </div>
+
+        {(minPrice !== '' || maxPrice !== '') && (
+          <button
+            onClick={() => { setMinPrice(''); setMaxPrice(''); }}
+            style={{
+              padding: '0.5rem 1rem',
+              background: 'none',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-sm)',
+              fontSize: '0.8rem',
+              color: 'var(--text-muted)',
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              transition: 'var(--transition)',
+              whiteSpace: 'nowrap'
+            }}
+            onMouseEnter={e => {
+              (e.target as HTMLButtonElement).style.borderColor = '#dc2626';
+              (e.target as HTMLButtonElement).style.color = '#dc2626';
+            }}
+            onMouseLeave={e => {
+              (e.target as HTMLButtonElement).style.borderColor = 'var(--border)';
+              (e.target as HTMLButtonElement).style.color = 'var(--text-muted)';
+            }}
+          >
+            ✕ Limpar filtro
+          </button>
+        )}
+
+        {(minPrice !== '' || maxPrice !== '') && (
+          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginLeft: 'auto' }}>
+            {filteredProducts.length} {filteredProducts.length === 1 ? 'produto encontrado' : 'produtos encontrados'}
+          </span>
+        )}
+      </div>
+      {/* FIM FILTRO DE PREÇO */}
+
+      {filteredProducts.length === 0 && products.length > 0 ? (
+        <div style={{ textAlign: 'center', padding: '4rem 2rem' }}>
+          <p style={{ color: '#666', fontStyle: 'italic', fontSize: '1.1rem', marginBottom: '1rem' }}>
+            Nenhum produto encontrado nessa faixa de preço.
+          </p>
+          <button
+            onClick={() => { setMinPrice(''); setMaxPrice(''); }}
+            style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', textDecoration: 'underline', fontSize: '0.95rem' }}
+          >
+            Limpar filtro de preço
+          </button>
+        </div>
+      ) : products.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '4rem 2rem' }}>
           <p style={{ color: '#666', fontStyle: 'italic', fontSize: '1.1rem', marginBottom: '1rem' }}>
             {searchQuery 
@@ -105,7 +227,7 @@ const Products = () => {
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '2rem' }}>
-          {products.map((prod) => (
+          {filteredProducts.map((prod) => (
             <ProductCard key={prod.id} product={prod} />
           ))}
         </div>
