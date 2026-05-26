@@ -23,6 +23,7 @@ const Products = () => {
         let query = supabase
           .from('products')
           .select('*, categories!inner(name)')
+          .eq('is_active', true)
           .order('created_at', { ascending: false });
 
         if (searchQuery) {

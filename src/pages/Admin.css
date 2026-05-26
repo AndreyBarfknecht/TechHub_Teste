@@ -485,6 +485,37 @@
   object-fit: cover;
 }
 
+/* Product Status Styles */
+.product-list-item.item-disabled {
+  background-color: #f9fafb;
+  opacity: 0.8;
+}
+
+.item-status-overlay {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  background: rgba(220, 38, 38, 0.9);
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  text-transform: uppercase;
+  z-index: 2;
+}
+
+.btn-icon.inactive {
+  background-color: #fef2f2;
+}
+
+.btn-icon.active {
+  background-color: #ecfdf5;
+}
+
 .mini-progress {
   width: 100px;
   height: 6px;

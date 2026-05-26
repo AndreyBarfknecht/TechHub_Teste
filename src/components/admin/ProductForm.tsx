@@ -26,6 +26,7 @@ export default function ProductForm({ onProductAdded, editingProduct, onCancelEd
   const [stock, setStock] = useState('0');
   const [categoryId, setCategoryId] = useState('');
   const [isFeatured, setIsFeatured] = useState(false);
+  const [isActive, setIsActive] = useState(true);
   
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [currentImageUrls, setCurrentImageUrls] = useState<string[]>([]);
@@ -39,6 +40,7 @@ export default function ProductForm({ onProductAdded, editingProduct, onCancelEd
       setStock(editingProduct.stock_quantity.toString());
       setCategoryId(editingProduct.category_id);
       setIsFeatured(editingProduct.is_featured);
+      setIsActive(editingProduct.is_active);
       setCurrentImageUrls(editingProduct.image_urls || []);
       
       if (editingProduct.specifications) {
@@ -58,6 +60,7 @@ export default function ProductForm({ onProductAdded, editingProduct, onCancelEd
       setStock('0');
       setCategoryId(categories.length > 0 ? categories[0].id : '');
       setIsFeatured(false);
+      setIsActive(true);
       setCurrentImageUrls([]);
       setSpecs([]);
       setImageFiles([]);
@@ -122,6 +125,7 @@ export default function ProductForm({ onProductAdded, editingProduct, onCancelEd
         image_urls: finalImageUrls,
         specifications,
         is_featured: isFeatured,
+        is_active: isActive,
         updated_at: new Date().toISOString()
       };
 
@@ -176,9 +180,15 @@ export default function ProductForm({ onProductAdded, editingProduct, onCancelEd
           />
         </div>
         
-        <div className="admin-form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '1rem' }}>
-          <input type="checkbox" id="isFeatured" checked={isFeatured} onChange={e => setIsFeatured(e.target.checked)} style={{ width: '18px', height: '18px' }} />
-          <label htmlFor="isFeatured" style={{ fontWeight: 600, color: 'var(--text-main)', cursor: 'pointer' }}>Destacar na página principal</label>
+        <div className="admin-form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <input type="checkbox" id="isFeatured" checked={isFeatured} onChange={e => setIsFeatured(e.target.checked)} style={{ width: '18px', height: '18px' }} />
+            <label htmlFor="isFeatured" style={{ fontWeight: 600, color: 'var(--text-main)', cursor: 'pointer' }}>Destacar na página principal</label>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <input type="checkbox" id="isActive" checked={isActive} onChange={e => setIsActive(e.target.checked)} style={{ width: '18px', height: '18px' }} />
+            <label htmlFor="isActive" style={{ fontWeight: 600, color: 'var(--text-main)', cursor: 'pointer' }}>Produto ativo (visível na loja)</label>
+          </div>
         </div>
       </div>
 
