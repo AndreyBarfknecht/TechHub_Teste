@@ -24,6 +24,11 @@
   padding: 0;
 }
 
+html, body {
+  overflow-x: hidden;
+  width: 100%;
+}
+
 body {
   font-family: "Inter", sans-serif;
   background-color: var(--bg-color);
@@ -218,4 +223,10 @@ button {
   text-align: center;
   color: var(--text-muted);
   font-size: 0.85rem;
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 0 1rem;
+  }
 }
