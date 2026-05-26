@@ -112,9 +112,9 @@ export default function ProductList({ refreshTrigger, onEdit, onDelete }: Produc
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <h3>{product.name}</h3>
                 {product.is_active ? (
-                  <CheckCircle2 size={14} color="#059669" title="Ativo" />
+                  <CheckCircle2 size={14} color="#059669" />
                 ) : (
-                  <XCircle size={14} color="#dc2626" title="Inativo" />
+                  <XCircle size={14} color="#dc2626" />
                 )}
               </div>
               <span className="item-category">{product.category?.name || 'Sem categoria'}</span>
