@@ -63,7 +63,7 @@ const Navbar = () => {
           <form className="nav-search hidden-mobile" onSubmit={handleSearch}>
             <input
               type="text"
-              placeholder="Search for products..."
+              placeholder="Procure produtos..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -125,26 +125,26 @@ const Navbar = () => {
             <Link to="/products" onClick={closeMenu} className="mobile-link">
               Todos os Produtos
             </Link>
-            
+
             <div className="mobile-divider" />
-            
+
             {user ? (
               <>
                 <div className="user-info-brief">
                   <User size={20} />
                   <span>{user.email}</span>
                 </div>
-                
+
                 {user.email === 'admin@gmail.com' && (
                   <Link to="/admin" onClick={closeMenu} className="mobile-link admin-link">
                     <UserCog size={20} /> Painel Admin
                   </Link>
                 )}
-                
+
                 <Link to="/profile" onClick={closeMenu} className="mobile-link">
                   <User size={20} /> Meu Perfil
                 </Link>
-                
+
                 <button className="mobile-link logout-btn" onClick={() => { signOut(); closeMenu(); }}>
                   <LogOut size={20} /> Sair
                 </button>
