@@ -202,14 +202,14 @@ export default function AdminPage() {
 
         {/* Tab Navigation */}
         <div className="admin-tabs">
-          <button 
+          <button
             className={`admin-tab-btn ${activeTab === 'products' ? 'active' : ''}`}
             onClick={() => setActiveTab('products')}
           >
             <PackageIcon size={18} />
             Produtos & Cupons
           </button>
-          <button 
+          <button
             className={`admin-tab-btn ${activeTab === 'reports' ? 'active' : ''}`}
             onClick={() => setActiveTab('reports')}
           >
@@ -222,7 +222,7 @@ export default function AdminPage() {
           <>
             <div style={{ marginTop: "2rem" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem", flexWrap: "wrap", gap: "1rem" }}>
-                <h2 style={{ fontSize: "1.5rem", color: "var(--text-main)" }}>Catálogo de Produtos</h2>
+                <h2 style={{ fontSize: "1.5rem", color: "var(--text-main)" }}>Produtos</h2>
                 <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
                   <Link to="/" className="btn-logout"
                     style={{ textDecoration: "none", height: "42px", display: "flex", alignItems: "center", gap: "0.5rem" }}>
