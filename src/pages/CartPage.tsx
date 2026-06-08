@@ -225,8 +225,8 @@ const CartPage = () => {
 
                 <div className="summary-line">
                   <span>Frete</span>
-                  <span className={shippingFee === 0 ? 'shipping-free' : ''}>
-                    {shippingFee === 0 ? 'Grátis 🎉' : formatBRL(shippingFee)}
+                  <span className={shippingFee === 0 && !isManuallyCalculated ? 'shipping-pending' : ''}>
+                    {shippingFee === 0 && !isManuallyCalculated ? 'A calcular' : formatBRL(shippingFee)}
                   </span>
                 </div>
 

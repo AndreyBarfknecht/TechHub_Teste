@@ -145,7 +145,7 @@ CREATE TABLE public.store_settings (
 
 -- Inserir configuração inicial do banner
 INSERT INTO public.store_settings (key, value)
-VALUES ('announcement_bar', '{"message": "Frete grátis em compras acima de R$ 200!", "link": "/products", "is_active": true}'::JSONB)
+VALUES ('announcement_bar', '{"message": "Confira nossas ofertas exclusivas desta semana!", "link": "/products", "is_active": true}'::JSONB)
 ON CONFLICT (key) DO NOTHING;
 
 -- RLS para store_settings

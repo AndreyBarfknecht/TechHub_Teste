@@ -216,7 +216,7 @@ export default function ProductDetailPage() {
             <ul className="product-benefits">
               <li className="benefit-item">
                 <Truck className="benefit-icon" size={20} />
-                <span><strong>Frete Grátis</strong> para todo o Brasil.</span>
+                <span><strong>Entregas rápidas</strong> para todo o Brasil.</span>
               </li>
               <li className="benefit-item">
                 <RotateCcw className="benefit-icon" size={20} />

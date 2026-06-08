@@ -28,7 +28,7 @@ const CheckoutPage = () => {
     couponCode?: string;
   } | null>(null);
 
-  const [shippingFee, setShippingFee] = useState<number>(25.9);
+  const [shippingFee, setShippingFee] = useState<number>(0);
   const [shippingInfo, setShippingInfo] = useState<{ carrier: string; days: number } | null>(null);
   const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
   const [isManuallyCalculated, setIsManuallyCalculated] = useState(false);
@@ -119,13 +119,7 @@ const CheckoutPage = () => {
     if (!authLoading && items.length === 0 && currentStep < 3) navigate('/cart');
   }, [items, authLoading, navigate, currentStep]);
 
-  // Sync initial fee
-  useEffect(() => {
-    if (!isManuallyCalculated) {
-      if (totalPrice >= 200 && totalPrice > 0) setShippingFee(0);
-      else setShippingFee(25.9);
-    }
-  }, [totalPrice, isManuallyCalculated]);
+  // Sync initial fee - REMOVED free shipping logic
 
   // Profile and Address data
   useEffect(() => {
@@ -540,7 +534,7 @@ const CheckoutPage = () => {
                   <span>Frete</span>
                   <div style={{textAlign:'right'}}>
                     {isCalculatingShipping ? <Loader2 size={12} className="spinning" /> : (
-                      <><span style={{color: shippingFee === 0 ? '#10b981' : 'inherit', fontWeight: 600}}>{shippingFee === 0 ? 'Grátis' : formatBRL(shippingFee)}</span>{shippingInfo && <div style={{fontSize:'0.65rem', opacity:0.7}}>{shippingInfo.carrier}</div>}</>
+                      <><span style={{fontWeight: 600}}>{shippingFee === 0 && !isManuallyCalculated ? '--' : formatBRL(shippingFee)}</span>{shippingInfo && <div style={{fontSize:'0.65rem', opacity:0.7}}>{shippingInfo.carrier}</div>}</>
                     )}
                   </div>
                 </div>

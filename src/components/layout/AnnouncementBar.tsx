@@ -21,7 +21,7 @@ const AnnouncementBar: React.FC = () => {
         console.error('Erro ao carregar banner:', err);
         // Fallback para valor padrão se falhar
         setSettings({
-          message: "Frete grátis em compras acima de R$ 200!",
+          message: "Confira nossas ofertas exclusivas desta semana!",
           link: "/products",
           is_active: true
         });
