@@ -79,7 +79,7 @@ const CheckoutPage = () => {
         id: data.id,
         code: data.code,
         discount_percent: data.discount_percent
-      });
+      } as any);
       
       setCouponInput('');
     } catch (err: any) {
