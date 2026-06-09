@@ -18,7 +18,9 @@ export function ShippingCalculator({ onShippingRateChange }: ShippingCalculatorP
     setError('');
 
     try {
-      const data = await calculateShippingRate(cep);
+      // Remove a máscara antes de enviar para a API
+      const cleanCep = cep.replace(/\D/g, '');
+      const data = await calculateShippingRate(cleanCep);
       setResult(data);
       onShippingRateChange(data.rate);
     } catch (err) {
@@ -31,6 +33,12 @@ export function ShippingCalculator({ onShippingRateChange }: ShippingCalculatorP
     }
   };
 
+  const handleCepChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value.replace(/\D/g, '');
+    value = value.replace(/(\d{5})(\d)/, '$1-$2');
+    setCep(value.substring(0, 9));
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
       <form onSubmit={handleCalculate} style={{ display: 'flex', gap: '8px' }}>
@@ -39,7 +47,7 @@ export function ShippingCalculator({ onShippingRateChange }: ShippingCalculatorP
             type="text"
             placeholder="00000-000"
             value={cep}
-            onChange={e => setCep(e.target.value.replace(/\D/g, '').slice(0, 8))}
+            onChange={handleCepChange}
             style={{
               width: '100%',
               padding: '10px 10px 10px 35px',

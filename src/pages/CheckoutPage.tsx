@@ -54,27 +54,40 @@ const CheckoutPage = () => {
   const [couponLoading, setCouponLoading] = useState(false);
 
   const handleApplyCoupon = async () => {
-    const code = couponInput.trim().toUpperCase();
+    const code = couponInput.trim();
     if (!code) return;
+    
     setCouponError('');
     setCouponLoading(true);
-    const { data, error } = await supabase
-      .from('coupons')
-      .select('*')
-      .eq('code', code)
-      .eq('is_active', true)
-      .single();
-    setCouponLoading(false);
-    if (error || !data) {
-      setCouponError('Cupom inválido ou não encontrado.');
-      return;
+    
+    try {
+      // Chama a função RPC no banco de dados para validar o cupom com segurança
+      const { data, error } = await supabase.rpc('validate_coupon', { 
+        p_code: code 
+      });
+
+      if (error) throw error;
+
+      // Agora data é um objeto direto (JSONB)
+      if (!data.is_valid) {
+        setCouponError(data.message);
+        return;
+      }
+
+      // Se for válido, aplicamos o cupom no contexto do carrinho
+      applyCoupon({
+        id: data.id,
+        code: data.code,
+        discount_percent: data.discount_percent
+      } as any);
+      
+      setCouponInput('');
+    } catch (err: any) {
+      console.error("Erro ao validar cupom:", err);
+      setCouponError(err.message || 'Erro ao validar cupom.');
+    } finally {
+      setCouponLoading(false);
     }
-    if (data.max_uses !== null && data.usage_count >= data.max_uses) {
-      setCouponError('Este cupom atingiu o limite de usos.');
-      return;
-    }
-    applyCoupon(data);
-    setCouponInput('');
   };
 
   // ----- VIA CEP & SHIPPING -----
@@ -232,6 +245,7 @@ const CheckoutPage = () => {
     setIsSubmitting(true);
     setSubmitError(null);
     try {
+      // 1. Atualizar informações básicas do perfil (opcional, mas útil)
       const { error: profileError } = await supabase.from('profiles').update({
         full_name: delivery.name,
         cpf: delivery.cpf,
@@ -239,48 +253,34 @@ const CheckoutPage = () => {
         cep: delivery.cep,
         address: `${delivery.address}, ${delivery.number}`,
         city: delivery.city,
-        state: delivery.state,
-        payment_preferences: {
-          recent_method: payment.method,
-          recent_card: payment.method === 'credit_card' ? {
-            last4: payment.cardNumber.slice(-4),
-            name: payment.cardName,
-            expiry: payment.cardExpiry,
-            flag: payment.cardFlag
-          } : null
-        }
+        state: delivery.state
       }).eq('id', user.id);
       
       if (profileError) console.error("Erro ao atualizar profile", profileError);
 
-      const orderId = crypto.randomUUID();
-      const { error } = await supabase.from('orders').insert({ 
-        id: orderId, user_id: user.id, status: 'paid', 
-        subtotal: totalPrice, shipping_fee: shippingFee, total_amount: orderTotal, 
-        shipping_address: `${delivery.address}, ${delivery.number}`, 
-        payment_method: payment.method, created_at: new Date().toISOString() 
-      });
-      if (error) throw error;
-      setCreatedOrderId(orderId);
-      const orderItems = items.map(item => ({ 
-        id: crypto.randomUUID(), order_id: orderId, product_id: item.product.id, 
-        quantity: item.quantity, unit_price: item.product.price, created_at: new Date().toISOString() 
+      // 2. Chamar a função atômica no banco de dados (RPC)
+      const orderItemsData = items.map(item => ({
+        product_id: item.product.id,
+        quantity: item.quantity
       }));
-      await supabase.from('order_items').insert(orderItems);
+
+      const { data, error: rpcError } = await supabase.rpc('process_order', {
+        p_user_id: user.id,
+        p_shipping_address: `${delivery.address}, ${delivery.number}`,
+        p_payment_method: payment.method,
+        p_shipping_fee: shippingFee,
+        p_items: orderItemsData,
+        p_coupon_id: appliedCoupon?.id || null
+      });
+
+      if (rpcError) throw rpcError;
       
-      // REDUÇÃO DE ESTOQUE
-      for (const item of items) {
-        const newStock = item.product.stock_quantity - item.quantity;
-        await supabase
-          .from('products')
-          .update({ stock_quantity: Math.max(0, newStock) })
-          .eq('id', item.product.id);
+      // A função retorna um objeto JSONB com success e order_id ou error
+      if (!data.success) {
+        throw new Error(data.error || "Falha ao processar pedido");
       }
 
-      // INCREMENTAR USO DO CUPOM
-      if (appliedCoupon) {
-        await supabase.rpc('increment_coupon_usage', { coupon_id: appliedCoupon.id });
-      }
+      setCreatedOrderId(data.order_id);
       
       const methodLabels: Record<string, string> = {
         pix: 'PIX',
@@ -300,7 +300,12 @@ const CheckoutPage = () => {
 
       clearCart();
       setCurrentStep(3);
-    } catch (err: unknown) { setSubmitError(err instanceof Error ? err.message : "Erro"); } finally { setIsSubmitting(false); }
+    } catch (err: any) { 
+      console.error("Erro ao finalizar pedido:", err);
+      setSubmitError(err.message || "Erro ao processar o pedido. Tente novamente."); 
+    } finally { 
+      setIsSubmitting(false); 
+    }
   };
 
   const formatBRL = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
