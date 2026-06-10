@@ -37,7 +37,8 @@ const Navbar = () => {
       <div className="container nav-content">
         <div className="nav-brand">
           <Menu className="menu-icon" size={24} />
-          <Link to="/">
+          <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <img src="/logo-cube.svg" alt="TechHub Logo" style={{ width: '28px', height: '28px' }} />
             <h2>Tech<span className="text-primary">Hub</span></h2>
           </Link>
         </div>

@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <!-- Cube wireframe with rounded dots at vertices -->
+  <!-- Back face corners -->
+  <circle cx="50" cy="10" r="5" fill="#3B5BDB"/>
+  <circle cx="85" cy="28" r="5" fill="#3B5BDB"/>
+  <circle cx="15" cy="28" r="5" fill="#3B5BDB"/>
+  <!-- Middle center (top inner) -->
+  <circle cx="50" cy="45" r="5" fill="#3B5BDB"/>
+  <!-- Front face corners -->
+  <circle cx="15" cy="63" r="5" fill="#3B5BDB"/>
+  <circle cx="85" cy="63" r="5" fill="#3B5BDB"/>
+  <circle cx="50" cy="90" r="5" fill="#3B5BDB"/>
+
+  <!-- Top face edges -->
+  <line x1="50" y1="10" x2="85" y2="28" stroke="#3B5BDB" stroke-width="7" stroke-linecap="round"/>
+  <line x1="50" y1="10" x2="15" y2="28" stroke="#3B5BDB" stroke-width="7" stroke-linecap="round"/>
+  <line x1="85" y1="28" x2="50" y2="45" stroke="#3B5BDB" stroke-width="7" stroke-linecap="round"/>
+  <line x1="15" y1="28" x2="50" y2="45" stroke="#3B5BDB" stroke-width="7" stroke-linecap="round"/>
+
+  <!-- Vertical edges -->
+  <line x1="15" y1="28" x2="15" y2="63" stroke="#3B5BDB" stroke-width="7" stroke-linecap="round"/>
+  <line x1="85" y1="28" x2="85" y2="63" stroke="#3B5BDB" stroke-width="7" stroke-linecap="round"/>
+  <line x1="50" y1="45" x2="50" y2="90" stroke="#3B5BDB" stroke-width="7" stroke-linecap="round"/>
+
+  <!-- Bottom face edges -->
+  <line x1="15" y1="63" x2="50" y2="90" stroke="#3B5BDB" stroke-width="7" stroke-linecap="round"/>
+  <line x1="85" y1="63" x2="50" y2="90" stroke="#3B5BDB" stroke-width="7" stroke-linecap="round"/>
+  <line x1="15" y1="63" x2="50" y2="45" stroke="#3B5BDB" stroke-width="7" stroke-linecap="round"/>
+  <line x1="85" y1="63" x2="50" y2="45" stroke="#3B5BDB" stroke-width="7" stroke-linecap="round"/>
+</svg>
