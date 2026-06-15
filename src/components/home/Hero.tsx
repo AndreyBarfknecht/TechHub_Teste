@@ -20,7 +20,6 @@ const Hero: React.FC = () => {
           </p>
           <div className="hero-actions">
             <Link to="/products" className="btn-primary">Compre Agora</Link>
-            <button className="btn-secondary">Saiba Mais</button>
           </div>
 
           <div className="features">

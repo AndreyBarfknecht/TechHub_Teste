@@ -1,14 +1,10 @@
 // src/components/layout/Navbar.tsx
-// MUDANÇAS FEITAS NESSE ARQUIVO:
-// 1. Importado useCart
-// 2. Badge do carrinho agora mostra o número real de itens
-// 3. Botão do carrinho navega para /cart
 
 import { Link, useNavigate } from 'react-router-dom';
 import { ShoppingCart, Menu, Search, User, UserCog, LogOut } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { useCart } from '../../context/CartContext';       // NOVO
+import { useCart } from '../../context/CartContext';
 import './Navbar.css';
 
 const Navbar = () => {
@@ -40,7 +36,6 @@ const Navbar = () => {
     }
   };
 
-  const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
   const closeMenu = () => setIsMenuOpen(false);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -54,8 +49,9 @@ const Navbar = () => {
       <nav className="navbar glass">
         <div className="container nav-content">
           <div className="nav-brand">
-            <Menu className="menu-icon" size={24} onClick={toggleMenu} />
-            <Link to="/" onClick={closeMenu}>
+            <Menu className="menu-icon" size={24} />
+            <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <img src="/logo-cube.svg" alt="TechHub Logo" style={{ width: '28px', height: '28px' }} />
               <h2>Tech<span className="text-primary">Hub</span></h2>
             </Link>
           </div>
