@@ -21,8 +21,10 @@ export const useRelatedProducts = (categoryId: string | undefined, currentProduc
           .select('*, categories(name)')
           .eq('category_id', categoryId)
           .neq('id', currentProductId)
+          .eq('is_active', true)
+          .order('is_featured', { ascending: false })
           .order('created_at', { ascending: false })
-          .limit(4);
+          .limit(10);
 
         if (supabaseError) throw supabaseError;
         if (data) setRelatedProducts(data as Product[]);

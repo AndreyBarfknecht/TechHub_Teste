@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom'; // Importado para navegação
 import { supabase } from '../../lib/supabase';
 import type { Product } from './types';
-import { Edit2, Trash2, PackageSearch, Eye } from 'lucide-react';
+import { Edit2, Trash2, PackageSearch, Eye, ToggleLeft, ToggleRight, CheckCircle2, XCircle } from 'lucide-react';
 
 interface ProductListProps {
   refreshTrigger: number;
@@ -24,6 +24,25 @@ export default function ProductList({ refreshTrigger, onEdit, onDelete }: Produc
         setLoading(false);
       });
   }, [refreshTrigger]);
+
+  const handleToggleActive = async (product: Product) => {
+    try {
+      const { error } = await supabase
+        .from('products')
+        .update({ is_active: !product.is_active })
+        .eq('id', product.id);
+
+      if (error) throw error;
+      
+      // Update local state for immediate feedback
+      setProducts(prev => prev.map(p => 
+        p.id === product.id ? { ...p, is_active: !p.is_active } : p
+      ));
+    } catch (err) {
+      console.error('Error toggling product status:', err);
+      alert('Erro ao alterar status do produto. Verifique se a coluna is_active existe no banco de dados.');
+    }
+  };
 
   const handleDelete = async (product: Product) => {
     if (!confirm(`Atenção: Tem a certeza que deseja eliminar "${product.name}"?\nEsta ação não pode ser desfeita.`)) return;
@@ -73,17 +92,31 @@ export default function ProductList({ refreshTrigger, onEdit, onDelete }: Produc
   return (
     <div className="product-list-container">
       {products.map(product => (
-        <div key={product.id} className="product-list-item">
+        <div key={product.id} className={`product-list-item ${!product.is_active ? 'item-disabled' : ''}`}>
           
           <div className="item-info-group">
-            {product.image_urls && product.image_urls.length > 0 ? (
-              <img src={product.image_urls[0]} alt={product.name} className="item-thumb" />
-            ) : (
-              <div className="item-thumb-empty">S/ Img</div>
-            )}
+            <div style={{ position: 'relative' }}>
+              {product.image_urls && product.image_urls.length > 0 ? (
+                <img src={product.image_urls[0]} alt={product.name} className="item-thumb" />
+              ) : (
+                <div className="item-thumb-empty">S/ Img</div>
+              )}
+              {!product.is_active && (
+                <div className="item-status-overlay">
+                  <XCircle size={14} /> Inativo
+                </div>
+              )}
+            </div>
             
             <div className="item-details">
-              <h3>{product.name}</h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <h3>{product.name}</h3>
+                {product.is_active ? (
+                  <CheckCircle2 size={14} color="#059669" />
+                ) : (
+                  <XCircle size={14} color="#dc2626" />
+                )}
+              </div>
               <span className="item-category">{product.category?.name || 'Sem categoria'}</span>
             </div>
           </div>
@@ -96,7 +129,20 @@ export default function ProductList({ refreshTrigger, onEdit, onDelete }: Produc
           </div>
 
           <div className="item-actions">
-            {/* NOVO BOTÃO: VER PRODUTO NA LOJA */}
+            {/* BOTÃO DE STATUS (ATIVAR/DESATIVAR) */}
+            <button
+              onClick={() => handleToggleActive(product)}
+              className={`btn-icon ${product.is_active ? 'active' : 'inactive'}`}
+              title={product.is_active ? "Desativar Produto" : "Ativar Produto"}
+              style={{
+                border: product.is_active ? "1px solid #d1fae5" : "1px solid #fee2e2",
+                color: product.is_active ? "#059669" : "#dc2626"
+              }}
+            >
+              {product.is_active ? <ToggleRight size={16} /> : <ToggleLeft size={16} />}
+            </button>
+
+            {/* BOTÃO: VER PRODUTO NA LOJA */}
             <Link 
               to={`/product/${product.id}`} 
               className="btn-icon" 

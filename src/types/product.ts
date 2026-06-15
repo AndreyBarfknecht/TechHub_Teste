@@ -7,6 +7,7 @@ export interface Product {
   image_urls: string[];
   specifications: Record<string, string> | null;
   is_featured: boolean;
+  is_active: boolean;
   category_id: string;
   category: {
     name: string;

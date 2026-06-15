@@ -14,6 +14,7 @@ export const useTrendingProducts = () => {
         const { data, error: supabaseError } = await supabase
           .from('products')
           .select('*, categories(name)')
+          .eq('is_active', true)
           .order('is_featured', { ascending: false })
           .order('created_at', { ascending: false })
           .limit(8);

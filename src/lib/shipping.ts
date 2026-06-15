@@ -44,7 +44,7 @@ export async function calculateShippingRate(cep: string): Promise<ShippingRate> 
 
   // Fetch address info first (crucial for city confirmation)
   const addressInfo = await getAddressFromCep(cleanCep);
-  
+
   if (!addressInfo) {
     throw new Error('CEP não encontrado. Verifique os números.');
   }

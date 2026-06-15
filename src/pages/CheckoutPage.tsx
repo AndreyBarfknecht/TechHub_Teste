@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { supabase } from '../lib/supabase';
 import './CheckoutPage.css';
+import type { Address } from '../types/profile';
 
 import { calculateShippingRate } from '../lib/shipping';
 
@@ -17,9 +18,9 @@ const CheckoutPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [createdOrderId, setCreatedOrderId] = useState<string>('');
-  const [finalSummary, setFinalSummary] = useState<{ 
-    subtotal: number; 
-    shipping: number; 
+  const [finalSummary, setFinalSummary] = useState<{
+    subtotal: number;
+    shipping: number;
     discount: number;
     total: number;
     paymentMethod: string;
@@ -27,11 +28,13 @@ const CheckoutPage = () => {
     couponCode?: string;
   } | null>(null);
 
-  const [shippingFee, setShippingFee] = useState<number>(25.9);
+  const [shippingFee, setShippingFee] = useState<number>(0);
   const [shippingInfo, setShippingInfo] = useState<{ carrier: string; days: number } | null>(null);
   const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
   const [isManuallyCalculated, setIsManuallyCalculated] = useState(false);
-  
+
+  const [savedAddresses, setSavedAddresses] = useState<Address[]>([]);
+
   const orderTotal = Math.max(0, totalPrice + shippingFee - discountAmount);
 
   const [delivery, setDelivery] = useState({
@@ -51,27 +54,40 @@ const CheckoutPage = () => {
   const [couponLoading, setCouponLoading] = useState(false);
 
   const handleApplyCoupon = async () => {
-    const code = couponInput.trim().toUpperCase();
+    const code = couponInput.trim();
     if (!code) return;
+
     setCouponError('');
     setCouponLoading(true);
-    const { data, error } = await supabase
-      .from('coupons')
-      .select('*')
-      .eq('code', code)
-      .eq('is_active', true)
-      .single();
-    setCouponLoading(false);
-    if (error || !data) {
-      setCouponError('Cupom inválido ou não encontrado.');
-      return;
+
+    try {
+      // Chama a função RPC no banco de dados para validar o cupom com segurança
+      const { data, error } = await supabase.rpc('validate_coupon', {
+        p_code: code
+      });
+
+      if (error) throw error;
+
+      // Agora data é um objeto direto (JSONB)
+      if (!data.is_valid) {
+        setCouponError(data.message);
+        return;
+      }
+
+      // Se for válido, aplicamos o cupom no contexto do carrinho
+      applyCoupon({
+        id: data.id,
+        code: data.code,
+        discount_percent: data.discount_percent
+      } as any);
+
+      setCouponInput('');
+    } catch (err: any) {
+      console.error("Erro ao validar cupom:", err);
+      setCouponError(err.message || 'Erro ao validar cupom.');
+    } finally {
+      setCouponLoading(false);
     }
-    if (data.max_uses !== null && data.usage_count >= data.max_uses) {
-      setCouponError('Este cupom atingiu o limite de usos.');
-      return;
-    }
-    applyCoupon(data);
-    setCouponInput('');
   };
 
   // ----- VIA CEP & SHIPPING -----
@@ -85,21 +101,21 @@ const CheckoutPage = () => {
       setShippingFee(shipping.rate || 0);
       setShippingInfo({ carrier: shipping.carrier || 'Transportadora', days: shipping.deliveryDays || 5 });
       setIsManuallyCalculated(true);
-      
-      setDelivery(prev => ({ 
-        ...prev, 
-        city: shipping.city || prev.city, 
-        state: shipping.state || prev.state 
+
+      setDelivery(prev => ({
+        ...prev,
+        city: shipping.city || prev.city,
+        state: shipping.state || prev.state
       }));
 
       const res = await fetch(`https://viacep.com.br/ws/${cepNumbers}/json/`);
       const data = await res.json();
       if (!data.erro) {
-        setDelivery(prev => ({ 
-          ...prev, 
-          address: prev.address || data.logradouro || '', 
-          city: data.localidade || prev.city, 
-          state: data.uf || prev.state 
+        setDelivery(prev => ({
+          ...prev,
+          address: prev.address || data.logradouro || '',
+          city: data.localidade || prev.city,
+          state: data.uf || prev.state
         }));
       }
     } catch (err) { console.error("Erro frete:", err); } finally { setIsCalculatingShipping(false); }
@@ -116,18 +132,12 @@ const CheckoutPage = () => {
     if (!authLoading && items.length === 0 && currentStep < 3) navigate('/cart');
   }, [items, authLoading, navigate, currentStep]);
 
-  // Sync initial fee
-  useEffect(() => {
-    if (!isManuallyCalculated) {
-      if (totalPrice >= 200 && totalPrice > 0) setShippingFee(0);
-      else setShippingFee(25.9);
-    }
-  }, [totalPrice, isManuallyCalculated]);
+  // Sync initial fee - REMOVED free shipping logic
 
-  // Profile data
+  // Profile and Address data
   useEffect(() => {
     if (user?.id) {
-      const loadProfile = async () => {
+      const loadUserData = async () => {
         try {
           const { data, error } = await supabase.from('profiles').select('*').eq('id', user.id).single();
           if (data && !error) {
@@ -150,12 +160,47 @@ const CheckoutPage = () => {
               number: loadedNumber || prev.number,
               city: data.city || prev.city, 
               state: data.state || prev.state 
+          // 1. Load basic profile (name, cpf, phone)
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+
+          // 2. Load addresses, prioritizing the default one
+          const { data: addresses } = await supabase
+            .from('user_addresses')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('is_default', { ascending: false })
+            .order('created_at', { ascending: false });
+
+          if (addresses) setSavedAddresses(addresses);
+          const defaultAddr = addresses?.[0];
+
+          if (profile || defaultAddr) {
+            setDelivery(prev => ({
+              ...prev,
+              name: profile?.full_name || prev.name,
+              phone: profile?.phone || prev.phone,
+              cpf: profile?.cpf || prev.cpf,
+              // Priority: user_addresses > profile fields
+              cep: defaultAddr?.zip_code || profile?.cep || prev.cep,
+              address: defaultAddr?.street || profile?.address || prev.address,
+              number: defaultAddr?.number || prev.number,
+              complement: defaultAddr?.complement || prev.complement,
+              city: defaultAddr?.city || profile?.city || prev.city,
+              state: defaultAddr?.state || profile?.state || prev.state
             }));
-            if (data.cep) handleCalculateShipping(data.cep);
+
+            const finalCep = defaultAddr?.zip_code || profile?.cep;
+            if (finalCep) handleCalculateShipping(finalCep);
           }
-        } catch (err) { console.error(err); }
+        } catch (err) {
+          console.error("Erro ao carregar dados do usuário:", err);
+        }
       };
-      loadProfile();
+      loadUserData();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
@@ -190,22 +235,22 @@ const CheckoutPage = () => {
     if (!delivery.number.trim()) errs.number = "Nº obrigatório";
     if (!delivery.city.trim()) errs.city = "Cidade obrigatória";
     if (!delivery.state.trim()) errs.state = "UF obrigatória";
-    
+
     setDeliveryErrors(errs);
     return Object.keys(errs).length === 0;
   };
 
   const [paymentErrors, setPaymentErrors] = useState<Record<string, string>>({});
-  
+
   const validatePayment = () => {
     if (payment.method === 'pix' || payment.method === 'boleto') return true;
-    
+
     const errs: Record<string, string> = {};
     if (payment.cardNumber.replace(/\D/g, '').length < 16) errs.cardNumber = "Cartão inválido";
     if (!payment.cardName.trim()) errs.cardName = "Nome é obrigatório";
     if (!payment.cardExpiry.match(/^\d{2}\/\d{2}$/)) errs.cardExpiry = "Validade inválida (MM/AA)";
     if (payment.cardCvv.length < 3) errs.cardCvv = "CVV inválido";
-    
+
     setPaymentErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -217,10 +262,11 @@ const CheckoutPage = () => {
       return;
     }
     if (!validatePayment()) return;
-    
+
     setIsSubmitting(true);
     setSubmitError(null);
     try {
+      // 1. Atualizar informações básicas do perfil (opcional, mas útil)
       const { error: profileError } = await supabase.from('profiles').update({
         full_name: delivery.name,
         cpf: delivery.cpf,
@@ -228,49 +274,35 @@ const CheckoutPage = () => {
         cep: delivery.cep,
         address: `${delivery.address}, ${delivery.number}`,
         city: delivery.city,
-        state: delivery.state,
-        payment_preferences: {
-          recent_method: payment.method,
-          recent_card: payment.method === 'credit_card' ? {
-            last4: payment.cardNumber.slice(-4),
-            name: payment.cardName,
-            expiry: payment.cardExpiry,
-            flag: payment.cardFlag
-          } : null
-        }
+        state: delivery.state
       }).eq('id', user.id);
-      
+
       if (profileError) console.error("Erro ao atualizar profile", profileError);
 
-      const orderId = crypto.randomUUID();
-      const { error } = await supabase.from('orders').insert({ 
-        id: orderId, user_id: user.id, status: 'paid', 
-        subtotal: totalPrice, shipping_fee: shippingFee, total_amount: orderTotal, 
-        shipping_address: `${delivery.address}, ${delivery.number}`, 
-        payment_method: payment.method, created_at: new Date().toISOString() 
-      });
-      if (error) throw error;
-      setCreatedOrderId(orderId);
-      const orderItems = items.map(item => ({ 
-        id: crypto.randomUUID(), order_id: orderId, product_id: item.product.id, 
-        quantity: item.quantity, unit_price: item.product.price, created_at: new Date().toISOString() 
+      // 2. Chamar a função atômica no banco de dados (RPC)
+      const orderItemsData = items.map(item => ({
+        product_id: item.product.id,
+        quantity: item.quantity
       }));
-      await supabase.from('order_items').insert(orderItems);
-      
-      // REDUÇÃO DE ESTOQUE
-      for (const item of items) {
-        const newStock = item.product.stock_quantity - item.quantity;
-        await supabase
-          .from('products')
-          .update({ stock_quantity: Math.max(0, newStock) })
-          .eq('id', item.product.id);
+
+      const { data, error: rpcError } = await supabase.rpc('process_order', {
+        p_user_id: user.id,
+        p_shipping_address: `${delivery.address}, ${delivery.number}`,
+        p_payment_method: payment.method,
+        p_shipping_fee: shippingFee,
+        p_items: orderItemsData,
+        p_coupon_id: appliedCoupon?.id || null
+      });
+
+      if (rpcError) throw rpcError;
+
+      // A função retorna um objeto JSONB com success e order_id ou error
+      if (!data.success) {
+        throw new Error(data.error || "Falha ao processar pedido");
       }
 
-      // INCREMENTAR USO DO CUPOM
-      if (appliedCoupon) {
-        await supabase.rpc('increment_coupon_usage', { coupon_id: appliedCoupon.id });
-      }
-      
+      setCreatedOrderId(data.order_id);
+
       const methodLabels: Record<string, string> = {
         pix: 'PIX',
         credit_card: 'Cartão de Crédito',
@@ -289,12 +321,17 @@ const CheckoutPage = () => {
 
       clearCart();
       setCurrentStep(3);
-    } catch (err: unknown) { setSubmitError(err instanceof Error ? err.message : "Erro"); } finally { setIsSubmitting(false); }
+    } catch (err: any) {
+      console.error("Erro ao finalizar pedido:", err);
+      setSubmitError(err.message || "Erro ao processar o pedido. Tente novamente.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const formatBRL = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-  if (authLoading || (!user && currentStep === 1)) return <div style={{display: 'flex', justifyContent: 'center', marginTop: '10vh'}}><Loader2 className="spinning" size={48} color="var(--primary)" /></div>;
+  if (authLoading || (!user && currentStep === 1)) return <div style={{ display: 'flex', justifyContent: 'center', marginTop: '10vh' }}><Loader2 className="spinning" size={48} color="var(--primary)" /></div>;
 
   return (
     <div className="checkout-page fade-in">
@@ -312,6 +349,38 @@ const CheckoutPage = () => {
             {currentStep === 1 && (
               <div className="card">
                 <h2><MapPin size={20} /> Entrega</h2>
+
+                {savedAddresses.length > 0 && (
+                  <div className="form-group saved-address-selector">
+                    <label>Usar endereço salvo</label>
+                    <select
+                      className="form-input"
+                      onChange={(e) => {
+                        const addr = savedAddresses.find(a => a.id === e.target.value);
+                        if (addr) {
+                          setDelivery(prev => ({
+                            ...prev,
+                            cep: addr.zip_code,
+                            address: addr.street,
+                            number: addr.number,
+                            complement: addr.complement || '',
+                            city: addr.city,
+                            state: addr.state
+                          }));
+                          handleCalculateShipping(addr.zip_code);
+                        }
+                      }}
+                    >
+                      <option value="">Selecione um endereço...</option>
+                      {savedAddresses.map(addr => (
+                        <option key={addr.id} value={addr.id}>
+                          {addr.alias} — {addr.street}, {addr.number}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
                 <div className="form-group"><label>Nome Completo *</label><input type="text" className={`form-input ${deliveryErrors.name ? 'input-error' : ''}`} value={delivery.name} onChange={e => handleMask(e, 'name')} />{deliveryErrors.name && <span className="form-error">{deliveryErrors.name}</span>}</div>
                 <div className="form-row">
                   <div className="form-group"><label>CPF *</label><input type="text" className={`form-input ${deliveryErrors.cpf ? 'input-error' : ''}`} value={delivery.cpf} onChange={e => handleMask(e, 'cpf')} />{deliveryErrors.cpf && <span className="form-error">{deliveryErrors.cpf}</span>}</div>
@@ -325,7 +394,7 @@ const CheckoutPage = () => {
                   </div>
                 </div>
                 <div className="form-row">
-                  <div className="form-group" style={{flex:2}}><label>Rua *</label><input type="text" className={`form-input ${deliveryErrors.address ? 'input-error' : ''}`} value={delivery.address} onChange={e => handleMask(e, 'address')} />{deliveryErrors.address && <span className="form-error">{deliveryErrors.address}</span>}</div>
+                  <div className="form-group" style={{ flex: 2 }}><label>Rua *</label><input type="text" className={`form-input ${deliveryErrors.address ? 'input-error' : ''}`} value={delivery.address} onChange={e => handleMask(e, 'address')} />{deliveryErrors.address && <span className="form-error">{deliveryErrors.address}</span>}</div>
                   <div className="form-group"><label>Nº *</label><input type="text" className={`form-input ${deliveryErrors.number ? 'input-error' : ''}`} value={delivery.number} onChange={e => handleMask(e, 'number')} />{deliveryErrors.number && <span className="form-error">{deliveryErrors.number}</span>}</div>
                 </div>
                 <div className="form-row">
@@ -333,7 +402,7 @@ const CheckoutPage = () => {
                   <div className="form-group"><label>UF *</label><input type="text" className={`form-input ${deliveryErrors.state ? 'input-error' : ''}`} value={delivery.state} onChange={e => handleMask(e, 'state')} maxLength={2} />{deliveryErrors.state && <span className="form-error">{deliveryErrors.state}</span>}</div>
                 </div>
                 <div className="form-group"><label>Telefone *</label><input type="text" className={`form-input ${deliveryErrors.phone ? 'input-error' : ''}`} value={delivery.phone} onChange={e => handleMask(e, 'phone')} />{deliveryErrors.phone && <span className="form-error">{deliveryErrors.phone}</span>}</div>
-                <div className="checkout-actions"><button className="btn-primary" onClick={() => { if(validateDelivery()) setCurrentStep(2); }}>Continuar para Pagamento <ArrowRight size={18} /></button></div>
+                <div className="checkout-actions"><button className="btn-primary" onClick={() => { if (validateDelivery()) setCurrentStep(2); }}>Continuar para Pagamento <ArrowRight size={18} /></button></div>
               </div>
             )}
             {currentStep === 2 && (
@@ -355,8 +424,8 @@ const CheckoutPage = () => {
                 {payment.method === 'pix' && (
                   <div className="pix-container fade-in">
                     <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x180&data=Tech-PIX-${orderTotal}`} alt="PIX" />
-                    <div style={{background:'var(--primary-light)', padding:'1rem', borderRadius:'8px', marginTop:'1rem', textAlign:'center', width:'100%'}}>
-                      <strong>Total: {formatBRL(orderTotal)}</strong><br/>
+                    <div style={{ background: 'var(--primary-light)', padding: '1rem', borderRadius: '8px', marginTop: '1rem', textAlign: 'center', width: '100%' }}>
+                      <strong>Total: {formatBRL(orderTotal)}</strong><br />
                       <small>Itens: {formatBRL(totalPrice)} + Frete: {shippingFee === 0 ? 'Grátis' : formatBRL(shippingFee)}</small>
                     </div>
                     <p style={{ fontSize: '0.8rem', color: '#666', marginTop: '1rem', textAlign: 'center' }}>
@@ -372,16 +441,16 @@ const CheckoutPage = () => {
                       <div style={{ background: '#f9f9f9', padding: '1rem', borderRadius: '6px', fontFamily: 'monospace', fontSize: '0.9rem', marginBottom: '1rem', wordBreak: 'break-all' }}>
                         34191.79001 01043.510047 91020.150008 9 950200000{Math.floor(orderTotal * 100)}
                       </div>
-                      <button 
-                        className="btn-secondary" 
+                      <button
+                        className="btn-secondary"
                         style={{ width: '100%', marginBottom: '1rem' }}
                         onClick={() => alert('Código de barras copiado!')}
                       >
                         Copiar Código de Barras
                       </button>
                     </div>
-                    <div style={{background:'var(--primary-light)', padding:'1rem', borderRadius:'8px', marginTop:'1rem', textAlign:'center', width:'100%'}}>
-                      <strong>Total: {formatBRL(orderTotal)}</strong><br/>
+                    <div style={{ background: 'var(--primary-light)', padding: '1rem', borderRadius: '8px', marginTop: '1rem', textAlign: 'center', width: '100%' }}>
+                      <strong>Total: {formatBRL(orderTotal)}</strong><br />
                       <small>Vencimento: em 3 dias úteis</small>
                     </div>
                     <p style={{ fontSize: '0.8rem', color: '#666', marginTop: '1rem', textAlign: 'center' }}>
@@ -410,7 +479,7 @@ const CheckoutPage = () => {
                       </div>
                     </div>
 
-                    <div className="checkout-form-section" style={{width:'100%'}}>
+                    <div className="checkout-form-section" style={{ width: '100%' }}>
                       <div className="form-group">
                         <label>Número do Cartão *</label>
                         <input type="text" className={`form-input ${paymentErrors.cardNumber ? 'input-error' : ''}`} placeholder="0000 0000 0000 0000" value={payment.cardNumber} onChange={e => handleMask(e, 'cardNumber')} onFocus={() => setFocusedCvv(false)} />
@@ -427,9 +496,9 @@ const CheckoutPage = () => {
                       </div>
                       <div className="form-group">
                         <label>Parcelamento *</label>
-                        <select 
-                          className="form-input" 
-                          value={payment.installments} 
+                        <select
+                          className="form-input"
+                          value={payment.installments}
                           onChange={e => handleMask(e as unknown as React.ChangeEvent<HTMLInputElement>, 'installments')}
                         >
                           {[...Array(12)].map((_, i) => (
@@ -453,7 +522,7 @@ const CheckoutPage = () => {
               <div className="success-container fade-in">
                 <Check size={64} color="#10b981" />
                 <h2>Pedido Realizado! 🎉</h2>
-                <div className="order-badge">#{createdOrderId.substring(0,8)}</div>
+                <div className="order-badge">#{createdOrderId.substring(0, 8)}</div>
                 <div className="success-details">
                   <div className="success-details-row"><span>Itens:</span><span>{formatBRL(finalSummary?.subtotal || 0)}</span></div>
                   <div className="success-details-row"><span>Frete:</span><span>{finalSummary?.shipping === 0 ? 'Grátis' : formatBRL(finalSummary?.shipping || 0)}</span></div>
@@ -476,7 +545,7 @@ const CheckoutPage = () => {
                     </div>
                   )}
                 </div>
-                {shippingInfo && <p style={{fontSize:'0.9rem', color:'var(--text-muted)', marginBottom:'1.5rem'}}><Truck size={16} style={{verticalAlign:'middle', marginRight:'5px'}} /> Entrega por {shippingInfo.carrier} em {shippingInfo.days} dias.</p>}
+                {shippingInfo && <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}><Truck size={16} style={{ verticalAlign: 'middle', marginRight: '5px' }} /> Entrega por {shippingInfo.carrier} em {shippingInfo.days} dias.</p>}
                 <button className="btn-primary" onClick={() => navigate('/products')}><ShoppingBag size={18} /> Voltar para Loja</button>
               </div>
             )}
@@ -486,12 +555,12 @@ const CheckoutPage = () => {
               <div className="card">
                 <h3>Resumo</h3>
                 <div className="summary-line"><span>Subtotal ({totalItems})</span><span>{formatBRL(totalPrice)}</span></div>
-                
+
                 <div className="summary-line">
                   <span>Frete</span>
-                  <div style={{textAlign:'right'}}>
+                  <div style={{ textAlign: 'right' }}>
                     {isCalculatingShipping ? <Loader2 size={12} className="spinning" /> : (
-                      <><span style={{color: shippingFee === 0 ? '#10b981' : 'inherit', fontWeight: 600}}>{shippingFee === 0 ? 'Grátis' : formatBRL(shippingFee)}</span>{shippingInfo && <div style={{fontSize:'0.65rem', opacity:0.7}}>{shippingInfo.carrier}</div>}</>
+                      <><span style={{ fontWeight: 600 }}>{shippingFee === 0 && !isManuallyCalculated ? '--' : formatBRL(shippingFee)}</span>{shippingInfo && <div style={{ fontSize: '0.65rem', opacity: 0.7 }}>{shippingInfo.carrier}</div>}</>
                     )}
                   </div>
                 </div>
@@ -553,7 +622,7 @@ const CheckoutPage = () => {
                 </div>
 
                 <div className="summary-divider" />
-                <div className="summary-total" style={{display:'flex', justifyContent:'space-between', fontSize:'1.1rem', fontWeight:'bold'}}><span>Total</span><span>{formatBRL(orderTotal)}</span></div>
+                <div className="summary-total" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.1rem', fontWeight: 'bold' }}><span>Total</span><span>{formatBRL(orderTotal)}</span></div>
               </div>
             )}
           </div>

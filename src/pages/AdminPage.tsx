@@ -1,13 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import ProductForm from "../components/admin/ProductForm";
 import ProductList from "../components/admin/ProductList";
+import StoreSettings from "../components/admin/StoreSettings";
+import SalesReport from "../components/admin/SalesReport";
 import type { Product } from "../types/product";
 import type { Session } from '@supabase/supabase-js';
 import {
   LogOut, LayoutDashboard, ShieldCheck, Plus, X,
-  ExternalLink, ArrowLeft, Tag, Trash2, ToggleLeft, ToggleRight
+  ExternalLink, ArrowLeft, Tag, Trash2, ToggleLeft, ToggleRight, Settings,
+  BarChart3, Package as PackageIcon
 } from "lucide-react";
 import "./Admin.css";
 
@@ -25,11 +28,13 @@ export default function AdminPage() {
   const navigate = useNavigate();
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'products' | 'reports'>('products');
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState("");
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [message, setMessage] = useState<{ type: "success" | "error" | ""; text: string }>({ type: "", text: "" });
 
@@ -41,6 +46,21 @@ export default function AdminPage() {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [couponsLoading, setCouponsLoading] = useState(false);
 
+  const fetchCoupons = useCallback(async () => {
+    setCouponsLoading(true);
+    try {
+      const { data } = await supabase
+        .from("coupons")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (data) setCoupons(data as Coupon[]);
+    } catch (err) {
+      console.error("Error fetching coupons:", err);
+    } finally {
+      setCouponsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -51,18 +71,10 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
-    if (session) fetchCoupons();
-  }, [session]);
-
-  const fetchCoupons = async () => {
-    setCouponsLoading(true);
-    const { data } = await supabase
-      .from("coupons")
-      .select("*")
-      .order("created_at", { ascending: false });
-    if (data) setCoupons(data);
-    setCouponsLoading(false);
-  };
+    if (session) {
+      fetchCoupons();
+    }
+  }, [session, fetchCoupons]);
 
   const openCouponModal = () => {
     setCouponCode("");
@@ -188,95 +200,123 @@ export default function AdminPage() {
           </div>
         )}
 
-        <div style={{ marginTop: "2rem" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem", flexWrap: "wrap", gap: "1rem" }}>
-            <h2 style={{ fontSize: "1.5rem", color: "var(--text-main)" }}>Catálogo de Produtos</h2>
-            <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
-              <Link to="/" className="btn-logout"
-                style={{ textDecoration: "none", height: "42px", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                <ExternalLink size={18} /> Ver Loja
-              </Link>
-              <button onClick={openCouponModal} className="btn-outline-admin"
-                style={{ height: "42px", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                <Tag size={18} /> Criar Cupom
-              </button>
-              <button onClick={openAddModal} className="btn-primary"
-                style={{ display: "flex", alignItems: "center", gap: "0.5rem", height: "42px" }}>
-                <Plus size={20} /> Novo Produto
-              </button>
-            </div>
-          </div>
-          <ProductList refreshTrigger={refreshTrigger} onEdit={openEditModal} onDelete={handleProductDeleted} />
+        {/* Tab Navigation */}
+        <div className="admin-tabs">
+          <button
+            className={`admin-tab-btn ${activeTab === 'products' ? 'active' : ''}`}
+            onClick={() => setActiveTab('products')}
+          >
+            <PackageIcon size={18} />
+            Produtos & Cupons
+          </button>
+          <button
+            className={`admin-tab-btn ${activeTab === 'reports' ? 'active' : ''}`}
+            onClick={() => setActiveTab('reports')}
+          >
+            <BarChart3 size={18} />
+            Relatórios de Vendas
+          </button>
         </div>
 
-        <div style={{ marginTop: "3rem", marginBottom: "3rem" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
-            <h2 style={{ fontSize: "1.5rem", color: "var(--text-main)", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <Tag size={22} color="var(--primary)" /> Cupons de Desconto
-            </h2>
-            <button onClick={openCouponModal} className="btn-primary"
-              style={{ display: "flex", alignItems: "center", gap: "0.5rem", height: "42px" }}>
-              <Plus size={18} /> Novo Cupom
-            </button>
-          </div>
-
-          {couponsLoading ? (
-            <p style={{ color: "var(--text-muted)", padding: "1rem" }}>Carregando cupons...</p>
-          ) : coupons.length === 0 ? (
-            <div className="admin-section" style={{ textAlign: "center", padding: "3rem" }}>
-              <Tag size={40} color="var(--border)" style={{ margin: "0 auto 1rem", display: "block" }} />
-              <p style={{ color: "var(--text-muted)" }}>Nenhum cupom criado ainda. Clique em "Criar Cupom" para começar.</p>
-            </div>
-          ) : (
-            <div className="product-list-container">
-              {coupons.map(coupon => (
-                <div key={coupon.id} className="product-list-item">
-                  <div className="item-info-group">
-                    <div style={{
-                      width: 64, height: 64, borderRadius: 8, flexShrink: 0,
-                      background: coupon.is_active ? "var(--primary-light)" : "#f1f5f9",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      border: "1px solid var(--border)"
-                    }}>
-                      <Tag size={24} color={coupon.is_active ? "var(--primary)" : "#94a3b8"} />
-                    </div>
-                    <div className="item-details">
-                      <h3 style={{ fontFamily: "monospace", letterSpacing: "0.08em", fontSize: "1.1rem" }}>
-                        {coupon.code}
-                      </h3>
-                      <span className="item-category">
-                        Usos: {coupon.usage_count}
-                        {coupon.max_uses !== null ? ` / ${coupon.max_uses}` : " (ilimitado)"}
-                        {" · "}Criado em {new Date(coupon.created_at).toLocaleDateString("pt-BR")}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="item-stats">
-                    <div className="item-price" style={{ color: "var(--primary)" }}>
-                      {coupon.discount_percent}% OFF
-                    </div>
-                    <span className={`item-stock ${coupon.is_active ? "stock-good" : "stock-out"}`}>
-                      {coupon.is_active ? "Ativo" : "Inativo"}
-                    </span>
-                  </div>
-                  <div className="item-actions">
-                    <button onClick={() => handleToggleCoupon(coupon)} className="btn-icon"
-                      title={coupon.is_active ? "Desativar cupom" : "Ativar cupom"}
-                      style={{
-                        border: coupon.is_active ? "1px solid #d1fae5" : "1px solid #fee2e2",
-                        color: coupon.is_active ? "#059669" : "#dc2626"
-                      }}>
-                      {coupon.is_active ? <ToggleRight size={16} /> : <ToggleLeft size={16} />}
-                    </button>
-                    <button onClick={() => handleDeleteCoupon(coupon)} className="btn-icon btn-delete" title="Deletar cupom">
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
+        {activeTab === 'products' ? (
+          <>
+            <div style={{ marginTop: "2rem" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem", flexWrap: "wrap", gap: "1rem" }}>
+                <h2 style={{ fontSize: "1.5rem", color: "var(--text-main)" }}>Produtos</h2>
+                <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+                  <Link to="/" className="btn-logout"
+                    style={{ textDecoration: "none", height: "42px", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <ExternalLink size={18} /> Ver Loja
+                  </Link>
+                  <button onClick={openCouponModal} className="btn-outline-admin"
+                    style={{ height: "42px", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <Tag size={18} /> Criar Cupom
+                  </button>
+                  <button onClick={() => setIsSettingsModalOpen(true)} className="btn-outline-admin"
+                    style={{ height: "42px", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <Settings size={18} /> Configurações
+                  </button>
+                  <button onClick={openAddModal} className="btn-primary"
+                    style={{ display: "flex", alignItems: "center", gap: "0.5rem", height: "42px" }}>
+                    <Plus size={20} /> Novo Produto
+                  </button>
                 </div>
-              ))}
+              </div>
+              <ProductList refreshTrigger={refreshTrigger} onEdit={openEditModal} onDelete={handleProductDeleted} />
             </div>
-          )}
-        </div>
+
+            <div style={{ marginTop: "3rem", marginBottom: "3rem" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
+                <h2 style={{ fontSize: "1.5rem", color: "var(--text-main)", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <Tag size={22} color="var(--primary)" /> Cupons de Desconto
+                </h2>
+                <button onClick={openCouponModal} className="btn-primary"
+                  style={{ display: "flex", alignItems: "center", gap: "0.5rem", height: "42px" }}>
+                  <Plus size={18} /> Novo Cupom
+                </button>
+              </div>
+
+              {couponsLoading ? (
+                <p style={{ color: "var(--text-muted)", padding: "1rem" }}>Carregando cupons...</p>
+              ) : coupons.length === 0 ? (
+                <div className="admin-section" style={{ textAlign: "center", padding: "3rem" }}>
+                  <Tag size={40} color="var(--border)" style={{ margin: "0 auto 1rem", display: "block" }} />
+                  <p style={{ color: "var(--text-muted)" }}>Nenhum cupom criado ainda. Clique em "Criar Cupom" para começar.</p>
+                </div>
+              ) : (
+                <div className="product-list-container">
+                  {coupons.map(coupon => (
+                    <div key={coupon.id} className="product-list-item">
+                      <div className="item-info-group">
+                        <div style={{
+                          width: 64, height: 64, borderRadius: 8, flexShrink: 0,
+                          background: coupon.is_active ? "var(--primary-light)" : "#f1f5f9",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          border: "1px solid var(--border)"
+                        }}>
+                          <Tag size={24} color={coupon.is_active ? "var(--primary)" : "#94a3b8"} />
+                        </div>
+                        <div className="item-details">
+                          <h3 style={{ fontFamily: "monospace", letterSpacing: "0.08em", fontSize: "1.1rem" }}>
+                            {coupon.code}
+                          </h3>
+                          <span className="item-category">
+                            Usos: {coupon.usage_count}
+                            {coupon.max_uses !== null ? ` / ${coupon.max_uses}` : " (ilimitado)"}
+                            {" · "}Criado em {new Date(coupon.created_at).toLocaleDateString("pt-BR")}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="item-stats">
+                        <div className="item-price" style={{ color: "var(--primary)" }}>
+                          {coupon.discount_percent}% OFF
+                        </div>
+                        <span className={`item-stock ${coupon.is_active ? "stock-good" : "stock-out"}`}>
+                          {coupon.is_active ? "Ativo" : "Inativo"}
+                        </span>
+                      </div>
+                      <div className="item-actions">
+                        <button onClick={() => handleToggleCoupon(coupon)} className="btn-icon"
+                          title={coupon.is_active ? "Desativar cupom" : "Ativar cupom"}
+                          style={{
+                            border: coupon.is_active ? "1px solid #d1fae5" : "1px solid #fee2e2",
+                            color: coupon.is_active ? "#059669" : "#dc2626"
+                          }}>
+                          {coupon.is_active ? <ToggleRight size={16} /> : <ToggleLeft size={16} />}
+                        </button>
+                        <button onClick={() => handleDeleteCoupon(coupon)} className="btn-icon btn-delete" title="Deletar cupom">
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
+        ) : (
+          <SalesReport />
+        )}
 
         {isModalOpen && (
           <div className="modal-overlay" onClick={closeModal}>
@@ -384,6 +424,23 @@ export default function AdminPage() {
                     {couponLoading ? "Criando..." : "Criar Cupom"}
                   </button>
                 </form>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {isSettingsModalOpen && (
+          <div className="modal-overlay" onClick={() => setIsSettingsModalOpen(false)}>
+            <div className="modal-container" style={{ maxWidth: 550 }} onClick={e => e.stopPropagation()}>
+              <div className="modal-header">
+                <h2 style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <Settings size={20} color="var(--primary)" />
+                  Configurações da Loja
+                </h2>
+                <button className="modal-close-btn" onClick={() => setIsSettingsModalOpen(false)}><X size={24} /></button>
+              </div>
+              <div className="modal-content">
+                <StoreSettings />
               </div>
             </div>
           </div>

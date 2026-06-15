@@ -9,16 +9,16 @@ const Footer: React.FC = () => {
     <footer className="footer">
       <div className="container footer-grid">
         <div className="footer-section">
-          <h3 className="footer-title">Willian Store</h3>
+          <h3 className="footer-title">TechStore</h3>
           <p className="footer-description">
             Sua loja de confiança para os melhores eletrônicos e gadgets do mercado.
             Qualidade garantida e entrega rápida.
           </p>
           <div className="footer-socials">
-            <a href="#" aria-label="Facebook"><Facebook size={20} /></a>
-            <a href="#" aria-label="Instagram"><Instagram size={20} /></a>
-            <a href="#" aria-label="Twitter"><Twitter size={20} /></a>
-            <a href="#" aria-label="Github"><Github size={20} /></a>
+            <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><Facebook size={20} /></a>
+            <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><Instagram size={20} /></a>
+            <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" aria-label="Twitter"><Twitter size={20} /></a>
+            <a href="https://github.com" target="_blank" rel="noopener noreferrer" aria-label="Github"><Github size={20} /></a>
           </div>
         </div>
 
@@ -28,22 +28,22 @@ const Footer: React.FC = () => {
             <li><Link to="/">Início</Link></li>
             <li><Link to="/products">Produtos</Link></li>
             <li><Link to="/login">Minha Conta</Link></li>
-            <li><a href="#faq">FAQ</a></li>
+            <li><Link to="/info/contact">FAQ</Link></li>
           </ul>
         </div>
 
         <div className="footer-section">
           <h4 className="footer-heading">Suporte</h4>
           <ul className="footer-links">
-            <li><a href="#shipping">Política de Frete</a></li>
-            <li><a href="#returns">Trocas e Devoluções</a></li>
-            <li><a href="#privacy">Privacidade</a></li>
-            <li><a href="#contact">Contato</a></li>
+            <li><Link to="/info/shipping">Política de Frete</Link></li>
+            <li><Link to="/info/returns">Trocas e Devoluções</Link></li>
+            <li><Link to="/info/privacy">Privacidade</Link></li>
+            <li><Link to="/info/contact">Contato</Link></li>
           </ul>
         </div>
       </div>
       <div className="footer-bottom container">
-        <p>&copy; {currentYear} Willian Store. Todos os direitos reservados.</p>
+        <p>&copy; {currentYear} TechStore. Todos os direitos reservados.</p>
       </div>
     </footer>
   );

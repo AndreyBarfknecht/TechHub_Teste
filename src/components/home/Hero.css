@@ -142,18 +142,38 @@
   100% { transform: translateY(0px); }
 }
 
+/* Ajustes Responsivos Cirúrgicos (sem alterar o estilo original) */
 @media (max-width: 992px) {
   .hero-content {
     grid-template-columns: 1fr;
     text-align: center;
+    gap: 2rem;
+  }
+  .hero-title {
+    font-size: 2.5rem;
   }
   .hero-subtitle {
-    margin: 0 auto 2.5rem;
+    margin: 0 auto 2rem;
   }
   .hero-actions {
     justify-content: center;
+    flex-wrap: wrap;
   }
   .features {
     justify-content: center;
+    flex-wrap: wrap;
+  }
+  .hero-image-composite {
+    max-width: 400px;
+    margin: 0 auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero-title {
+    font-size: 2rem;
+  }
+  .hero-actions .btn {
+    width: 100%;
   }
 }

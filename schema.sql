@@ -136,6 +136,24 @@ CREATE POLICY "Users can insert own addresses" ON public.user_addresses FOR INSE
 CREATE POLICY "Users can update own addresses" ON public.user_addresses FOR UPDATE USING (auth.uid() = user_id);
 CREATE POLICY "Users can delete own addresses" ON public.user_addresses FOR DELETE USING (auth.uid() = user_id);
 
+-- 8. Tabela de Configurações da Loja (Banner, etc)
+CREATE TABLE public.store_settings (
+    key TEXT PRIMARY KEY,
+    value JSONB NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW())
+);
+
+-- Inserir configuração inicial do banner
+INSERT INTO public.store_settings (key, value)
+VALUES ('announcement_bar', '{"message": "Confira nossas ofertas exclusivas desta semana!", "link": "/products", "is_active": true}'::JSONB)
+ON CONFLICT (key) DO NOTHING;
+
+-- RLS para store_settings
+ALTER TABLE public.store_settings ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Settings are viewable by everyone" ON public.store_settings FOR SELECT USING (true);
+CREATE POLICY "Only admins can update settings" ON public.store_settings FOR UPDATE USING (auth.role() = 'service_role' OR EXISTS (SELECT 1 FROM auth.users WHERE auth.users.id = auth.uid() AND auth.users.email LIKE '%admin%'));
+
 -- 8. Tabela de Cupons de Desconto
 CREATE TABLE public.coupons (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
