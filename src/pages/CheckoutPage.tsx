@@ -139,27 +139,6 @@ const CheckoutPage = () => {
     if (user?.id) {
       const loadUserData = async () => {
         try {
-          const { data, error } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-          if (data && !error) {
-            // Separa rua e número caso o address tenha sido salvo concatenado (ex: "Rua, 123")
-            let loadedAddress = data.address || '';
-            let loadedNumber = '';
-            const addressMatch = loadedAddress.match(/^(.+),\s*(\S+)$/);
-            if (addressMatch && /^\d/.test(addressMatch[2])) {
-              loadedAddress = addressMatch[1].trim();
-              loadedNumber = addressMatch[2].trim();
-            }
-
-            setDelivery(prev => ({ 
-              ...prev, 
-              name: data.full_name || prev.name, 
-              phone: data.phone || prev.phone, 
-              cpf: data.cpf || prev.cpf, 
-              cep: data.cep || prev.cep, 
-              address: loadedAddress || prev.address,
-              number: loadedNumber || prev.number,
-              city: data.city || prev.city, 
-              state: data.state || prev.state 
           // 1. Load basic profile (name, cpf, phone)
           const { data: profile } = await supabase
             .from('profiles')
